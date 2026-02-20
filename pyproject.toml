@@ -52,7 +52,7 @@ cli = [
     "databricks-connect~=15.4",
 ]
 pii = [
-    "numpy<2.0,>=1.20",
+    "numpy>=1.20,<3.0",
     "presidio-analyzer~=2.2.359",
     "spacy~=3.8",
     # spaCy models are downloaded at runtime when the PII detection check is created (see pii module).
