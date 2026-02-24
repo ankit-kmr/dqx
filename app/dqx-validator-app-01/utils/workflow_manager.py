@@ -2,19 +2,20 @@ import requests
 
 class WorkflowManager:
     def __init__(self, hostname, token, job_id):
-        self.api_url = f"https://{hostname}/api/2.1/jobs/run-now"
-        self.headers = {"Authorization": f"Bearer {token}"}
+        self.hostname = hostname
+        self.token = token
         self.job_id = job_id
 
-    def trigger_dqx_job(self, catalog, config_schema, source_schema, table):
+    def trigger_workflow(self, catalog, config, src, table):
+        api_url = f"https://{self.hostname}/api/2.1/jobs/run-now"
+        headers = {"Authorization": f"Bearer {self.token}"}
         payload = {
             "job_id": self.job_id,
             "job_parameters": {
                 "catalog_name": catalog,
-                "config_schema_name": config_schema,
-                "source_schema_name": source_schema,
+                "config_schema_name": config,
+                "source_schema_name": src,
                 "table_name": table
             }
         }
-        response = requests.post(self.api_url, headers=self.headers, json=payload)
-        return response
+        return requests.post(api_url, headers=headers, json=payload)
