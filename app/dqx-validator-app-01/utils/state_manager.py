@@ -11,6 +11,8 @@ class StateManager:
             st.session_state.rules_to_deactivate = []
         if "hidden_columns" not in st.session_state:
             st.session_state.hidden_columns = set()
+        if "show_execution_summary" not in st.session_state:
+            st.session_state.show_execution_summary = False
 
     @staticmethod
     def reset_portal():
