@@ -40,10 +40,16 @@ class UIComponents:
         st.subheader("🛡️ Manage Active Rules")
         df_mappings = self.db.fetch_dqx_mappings(cat, self.config_schema, schema, table)
         
-        if not df_mappings.empty:
-            m_col1, m_col2, m_col3, m_col4 = st.columns([1.5, 2.5, 3, 0.8])
-            m_col1.write("**Column**"); m_col2.write("**Rule Name**")
-            m_col3.write("**Arguments**"); m_col4.write("**Action**")
+        # Determine if we have rules to run
+        has_rules = not df_mappings.empty
+
+        if has_rules:
+            m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns([1.5, 2.5, 3, 3, 0.8])
+            m_col1.write("**Column**")
+            m_col2.write("**Rule Name**")
+            m_col3.write("**Description**")
+            m_col4.write("**Arguments**")
+            m_col5.write("**Action**")
             st.divider()
 
             for idx, m_row in df_mappings.iterrows():
@@ -51,15 +57,17 @@ class UIComponents:
                 if rule_key in st.session_state.rules_to_deactivate:
                     continue
                 
-                r_col1, r_col2, r_col3, r_col4 = st.columns([1.5, 2.5, 3, 0.8])
+                r_col1, r_col2, r_col3, r_col4, r_col5 = st.columns([1.5, 2.5, 3, 3, 0.8])
                 r_col1.text(m_row['column'])
                 r_col2.info(f"**{m_row['rule_name']}**")
-                r_col3.caption(str(m_row['arguments']) if m_row['arguments'] else "{}")
+                r_col3.caption(m_row['rule_description'])
+                r_col4.caption(str(m_row['arguments']) if m_row['arguments'] else "{}")
                 
-                if r_col4.button("❌", key=f"del_{idx}"):
+                if r_col5.button("❌", key=f"del_{idx}"):
                     st.session_state.rules_to_deactivate.append(rule_key)
                     st.rerun()
 
+            # Handling Deactivation
             if st.session_state.rules_to_deactivate:
                 st.warning(f"⚠️ {len(st.session_state.rules_to_deactivate)} rules marked for deactivation.")
                 c1, c2 = st.columns([2, 8])
@@ -80,17 +88,24 @@ class UIComponents:
 
         st.divider()
         st.subheader("🚀 Execution")
-        if st.button("Run DQX Checks", type="primary", disabled=df_mappings.empty):
-            resp = self.wm.trigger_workflow(cat, self.config_schema, schema, table)
-            if resp.status_code == 200:
-                st.success(f"✅ Triggered! Run ID: {resp.json().get('run_id')}")
-            else:
-                st.error(resp.text)
+        
+        # THE FIX: Toggle 'disabled' based on whether df_mappings had data
+        if st.button("Run DQX Checks", 
+                     type="primary", 
+                     disabled=not has_rules, 
+                     help="No rules found to execute" if not has_rules else "Trigger Databricks Workflow"):
+            
+            with st.spinner("Triggering Workflow..."):
+                resp = self.wm.trigger_workflow(cat, self.config_schema, schema, table)
+                if resp.status_code == 200:
+                    st.success(f"✅ Triggered! Run ID: {resp.json().get('run_id')}")
+                else:
+                    st.error(resp.text)
 
     def render_add_rules(self, cat, schema, table):
         st.subheader("✅ Configure New Rules")
         col_title, col_reset = st.columns([8, 2])
-        if col_reset.button("🧹 Clear", use_container_width=True, help="Clear all inputs and reset column visibility"):
+        if col_reset.button("🧹Clear", use_container_width=True, help="Clear all inputs and reset column visibility"):
             self.reset_configuration_form()
         # ---------------------------------------
 
@@ -193,11 +208,11 @@ class UIComponents:
                         error_logs.append(f"Unexpected error for {entry['col']}: {str(e)}")
 
                 if success_count > 0:
-                    st.success(f"Successfully registered {success_count} rules!")
-                    # Clear Cache and update state to show execution UI
-                    self.db.fetch_dqx_mappings.clear()
+                    self.db.fetch_dqx_mappings.clear() 
+                    st.cache_data.clear()
                     st.session_state.show_execution_summary = True
-                
+                    st.success(f"Successfully registered {success_count} rules!")
+                    st.rerun()
                 for err in error_logs:
                     st.error(err)
 
@@ -208,9 +223,9 @@ class UIComponents:
             
             # Re-fetch the newly registered rules
             df_mappings_updated = self.db.fetch_dqx_mappings(cat, self.config_schema, schema, table)
-            
+            selected_cols = ["column", "rule_dimension", "rule_name", "rule_description", "criticality", "arguments"]
             if not df_mappings_updated.empty:
-                st.dataframe(df_mappings_updated, use_container_width=True, hide_index=True)
+                st.dataframe(df_mappings_updated[selected_cols], use_container_width=True, hide_index=True)
                 
                 st.divider()
                 st.subheader("🚀 Execution")
