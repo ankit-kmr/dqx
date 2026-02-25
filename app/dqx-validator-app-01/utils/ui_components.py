@@ -37,7 +37,7 @@ class UIComponents:
         st.dataframe(df, use_container_width=True, hide_index=True)
 
     def render_existing_rules(self, cat, schema, table):
-        st.subheader("🛡️ Manage Active Rules")
+        st.subheader("🛡️ Active Rules")
         df_mappings = self.db.fetch_dqx_mappings(cat, self.config_schema, schema, table)
         
         # Determine if we have rules to run
@@ -161,7 +161,11 @@ class UIComponents:
                     if not m.empty: 
                         p_val = m.iloc[0]['argument_placeholder']
                 
+                # Dynamic Placeholder and Example Text Autofill
+                example_text = f"e.g: {p_val}"
+                autofill_key = f"autofill_{row_key}"
                 args = r_c5.text_input("Args", placeholder=p_val, label_visibility="collapsed", key=f"args_{row_key}")
+                r_c5.caption(example_text)
 
                 # Add/Remove Row Buttons
                 if r_c6.button("➕", key=f"add_{row_key}"):

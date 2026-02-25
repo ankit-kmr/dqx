@@ -51,7 +51,7 @@ with st.sidebar:
 
 # --- 5. Main Content Area ---
 if cat_select != "-- Select --" and table_select != "-- Select --":
-    tab_labels = ["📋 Table Overview", "🧬 Columns Details", "🛡️ Existing DQ Rules & Run", "✅ ADD NEW DQ Rules"]
+    tab_labels = ["📋 Table Overview", "🧬 Columns Details", "🛡️ Manage DQ Rules & Run", "✅ ADD NEW DQ Rules"]
     active_tab = st.radio("Navigation", options=tab_labels, horizontal=True, key="active_tab_nav")
     st.divider()
 
@@ -61,7 +61,7 @@ if cat_select != "-- Select --" and table_select != "-- Select --":
     elif active_tab == "🧬 Columns Details":
         ui.render_column_details(cat_select, schema_select, table_select)
 
-    elif active_tab == "🛡️ Existing DQ Rules & Run":
+    elif active_tab == "🛡️ Manage DQ Rules & Run":
         ui.render_existing_rules(cat_select, schema_select, table_select)
 
     elif active_tab == "✅ ADD NEW DQ Rules":
