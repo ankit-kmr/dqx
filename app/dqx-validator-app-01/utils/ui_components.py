@@ -115,6 +115,7 @@ class UIComponents:
         df_cols = self.db.fetch_columns(cat, schema, table)
 
         bulk_configs = []
+        all_args_filled = True
         
         # Table Header
         h_cols = st.columns([2, 1.5, 2, 1.2, 2, 0.4, 0.4])
@@ -172,19 +173,37 @@ class UIComponents:
 
                 # Collect configuration if rule is selected
                 if sel_rule != "-- Skip --":
-                    bulk_configs.append({
-                        "col": col_name, 
-                        "rid": sel_rule.split(" - ")[0].strip(), 
-                        "crit": crit, 
-                        "args": args
-                    })
+                    is_valid_json = False
+                    try:
+                        if args.strip():
+                            json.loads(args)
+                            is_valid_json = True
+                    except ValueError:
+                        is_valid_json = False
+
+                    if not args.strip():
+                        r_c5.error("Required ⚠️")
+                        all_args_filled = False
+                    elif not is_valid_json:
+                        r_c5.error("Invalid JSON ❌")
+                        all_args_filled = False
+                    else:
+                        bulk_configs.append({
+                            "col": col_name, 
+                            "rid": sel_rule.split(" - ")[0].strip(), 
+                            "crit": crit, 
+                            "args": args
+                        })
 
         st.divider()
 
         # 3. Registration Logic
         if bulk_configs:
+            if not all_args_filled:
+                st.warning("⚠️ Some selected rules are missing required Arguments. Please fill them to continue.")
+
             st.write(f"Ready to register **{len(bulk_configs)}** rules.")
-            if st.button("Register Rules", type="primary"):
+            if st.button("Register Rules", type="primary", disabled=not all_args_filled):
                 success_count = 0
                 error_logs = []
                 
