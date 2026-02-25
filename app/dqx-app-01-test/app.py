@@ -71,26 +71,26 @@ def trigger_workflow(catalog, config, src, table):
     return response
 
 # --- 2. Data Fetching Functions ---
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=600 ,show_spinner=False)
 def fetch_catalogs():
     with get_connection().cursor() as cursor:
         cursor.execute("SHOW CATALOGS")
         return [row[0] for row in cursor.fetchall()]
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=600 ,show_spinner=False)
 def fetch_schemas(catalog_name):
     with get_connection().cursor() as cursor:
         cursor.execute(f"SHOW SCHEMAS IN {catalog_name}")
         return [row[0] for row in cursor.fetchall()]
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=300 ,show_spinner=False)
 def fetch_tables(catalog_name, schema_name):
     with get_connection().cursor() as cursor:
         cursor.execute(f"SHOW TABLES IN {catalog_name}.{schema_name}")
         table_data = cursor.fetchall()
         return [row[1] for row in table_data] if table_data else []
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=300 ,show_spinner=False)
 def fetch_table_definition(catalog_name, schema_name, table_name):
     with get_connection().cursor() as cursor:
         cursor.execute(f"DESCRIBE TABLE {catalog_name}.{schema_name}.{table_name}")
@@ -106,7 +106,7 @@ def fetch_table_definition(catalog_name, schema_name, table_name):
         )
         return definition
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=300 ,show_spinner=False)
 def fetch_columns(catalog_name, schema_name, table_name):
     with get_connection().cursor() as cursor:
         # DESCRIBE returns several columns; we only need the first two
@@ -120,7 +120,7 @@ def fetch_columns(catalog_name, schema_name, table_name):
         df.columns = ['col_name', 'data_type']
         return df
         
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=300 ,show_spinner=False)
 def fetch_dqx_mappings(catalog, config_schema, src_schema_name, table):
     query = f"""
     WITH ranked_rules AS (
@@ -156,7 +156,7 @@ def fetch_dqx_mappings(catalog, config_schema, src_schema_name, table):
         return pd.DataFrame(data, columns=[desc[0] for desc in cursor.description]) if data else pd.DataFrame()
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=600 ,show_spinner=False)
 def fetch_rule_definitions(catalog, config_schema):
     # Added argument_placeholder to the SELECT
     query = f"""
@@ -169,7 +169,7 @@ def fetch_rule_definitions(catalog, config_schema):
         return pd.DataFrame(data, columns=[desc[0] for desc in cursor.description]) if data else pd.DataFrame()
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=600 ,show_spinner=False)
 def fetch_rule_dimensions(catalog, config_schema):
     query = f"SELECT DISTINCT rule_dimension FROM {catalog}.{config_schema}.dqx_rule_definitions WHERE rule_dimension IS NOT NULL"
     with get_connection().cursor() as cursor:
@@ -322,12 +322,13 @@ try:
                         st.session_state.rules_to_deactivate = []
 
                     # Table Header - Adjusted for better alignment
-                    # We removed "Rule ID" from the header and expanded the Rule Name space
-                    m_col1, m_col2, m_col3, m_col4 = st.columns([1.5, 2.5, 3, 0.8])
+                    # Added "Rule Description" column after "Rule Name"
+                    m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns([1.5, 2.5, 2.5, 3, 0.8])
                     m_col1.write("**Column**")
                     m_col2.write("**Rule Name**")
-                    m_col3.write("**Arguments**")
-                    m_col4.write("**Action**")
+                    m_col3.write("**Rule Description**")
+                    m_col4.write("**Arguments**")
+                    m_col5.write("**Action**")
                     st.divider()
 
                     for idx, m_row in df_mappings.iterrows():
@@ -337,18 +338,19 @@ try:
                         if rule_key in st.session_state.rules_to_deactivate:
                             continue
                             
-                        r_col1, r_col2, r_col3, r_col4 = st.columns([1.5, 2.5, 3, 0.8])
+                        r_col1, r_col2, r_col3, r_col4, r_col5 = st.columns([1.5, 2.5, 2.5, 3, 0.8])
                         
-                        # 1. & 2. UI Display: Show Rule Name instead of Rule ID
+                        # 1. Column
                         r_col1.text(m_row['column'])
+                        # 2. Rule Name
                         r_col2.info(f"**{m_row['rule_name']}**")
-                        
-                        # Format arguments for better readability in grid
+                        # 3. Rule Description
+                        r_col3.caption(m_row['rule_description'])
+                        # 4. Arguments
                         args_display = str(m_row['arguments']) if m_row['arguments'] else "{}"
-                        r_col3.caption(args_display)
-                        
-                        # 3. Grid View with Action Button
-                        if r_col4.button("❌", key=f"del_{idx}", help="Deactivate this rule"):
+                        r_col4.caption(args_display)
+                        # 5. Action Button
+                        if r_col5.button("❌", key=f"del_{idx}", help="Deactivate this rule"):
                             st.session_state.rules_to_deactivate.append(rule_key)
                             st.rerun()
 
@@ -557,8 +559,9 @@ try:
 
                                 # --- Display updated DQX mappings and allow execution of DQX checks ---
                                 df_mappings_updated = fetch_dqx_mappings(cat_input, config_schema_input, schema_name, selected_table)
+                                selected_cols = ["column", "rule_dimension", "rule_name", "rule_description", "criticality", "arguments"]
                                 if not df_mappings_updated.empty:
-                                    st.dataframe(df_mappings_updated, use_container_width=True, hide_index=True)
+                                    st.dataframe(df_mappings_updated[selected_cols], use_container_width=True, hide_index=True)
                                 else:
                                     st.info("No DQX mappings found for this table.")
                                 

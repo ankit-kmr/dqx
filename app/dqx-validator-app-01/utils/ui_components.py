@@ -235,8 +235,6 @@ class UIComponents:
                         if response.status_code == 200:
                             run_id = response.json().get('run_id')
                             st.success(f"✅ Workflow Triggered Successfully! Run ID: `{run_id}`")
-                            # Optionally reset summary view after running
-                            # st.session_state.show_execution_summary = False
                         else:
                             st.error(f"Workflow Trigger Failed: {response.text}")
             else:
