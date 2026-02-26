@@ -1,6 +1,8 @@
 import streamlit as st
 import json
 import pandas as pd
+import time
+
 
 class UIComponents:
     def __init__(self, db_manager, workflow_manager, config_schema):
@@ -211,31 +213,39 @@ class UIComponents:
             if st.button("Register Rules", type="primary", disabled=not all_args_filled):
                 success_count = 0
                 error_logs = []
-                
-                for entry in bulk_configs:
-                    try:
-                        # Validate JSON
-                        a_dict = json.loads(entry['args']) if entry['args'].strip() else {}
+                progress_bar = st.progress(0)
+                # Using the empty string spinner as you requested
+                with st.spinner(""):
+                    total_rules = len(bulk_configs)
+                    for entry in bulk_configs:
+                        try:
+                            # Validate JSON
+                            a_dict = json.loads(entry['args']) if entry['args'].strip() else {}
+                            
+                            success, msg = self.db.register_dq_rule(
+                                cat, self.config_schema, schema, table, 
+                                entry['col'], entry['rid'], entry['crit'], a_dict
+                            )
+                            
+                            if success:
+                                success_count += 1
+                            else:
+                                error_logs.append(f"Error in {entry['col']}: {msg}")
+                        except json.JSONDecodeError:
+                            error_logs.append(f"Invalid JSON format for column: {entry['col']}")
+                        except Exception as e:
+                            error_logs.append(f"Unexpected error for {entry['col']}: {str(e)}")
                         
-                        success, msg = self.db.register_dq_rule(
-                            cat, self.config_schema, schema, table, 
-                            entry['col'], entry['rid'], entry['crit'], a_dict
-                        )
-                        
-                        if success:
-                            success_count += 1
-                        else:
-                            error_logs.append(f"Error in {entry['col']}: {msg}")
-                    except json.JSONDecodeError:
-                        error_logs.append(f"Invalid JSON format for column: {entry['col']}")
-                    except Exception as e:
-                        error_logs.append(f"Unexpected error for {entry['col']}: {str(e)}")
+                        # Update progress bar (0.0 to 1.0)
+                        progress_bar.progress((success_count + len(error_logs)) / total_rules)
 
                 if success_count > 0:
                     self.db.fetch_dqx_mappings.clear() 
                     st.cache_data.clear()
                     st.session_state.show_execution_summary = True
                     st.success(f"Successfully registered {success_count} rules!")
+                    time.sleep(1)
+                    progress_bar.empty()
                     st.rerun()
                 for err in error_logs:
                     st.error(err)
