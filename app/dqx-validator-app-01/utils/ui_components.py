@@ -155,11 +155,13 @@ class UIComponents:
                 
                 # Dynamic Placeholder logic
                 p_val = '{"key": "value"}'
+                p_req = True
                 if sel_rule != "-- Skip --":
                     rid = sel_rule.split(" - ")[0].strip()
                     m = df_rules[df_rules['rule_id'].astype(str) == rid]
                     if not m.empty: 
                         p_val = m.iloc[0]['argument_placeholder']
+                        p_req = m.iloc[0]['is_arg_mendatory']
                 
                 # Dynamic Placeholder and Example Text Autofill
                 example_text = f"e.g: {p_val}"
@@ -177,15 +179,14 @@ class UIComponents:
 
                 # Collect configuration if rule is selected
                 if sel_rule != "-- Skip --":
-                    is_valid_json = False
+                    is_valid_json = True
                     try:
                         if args.strip():
                             json.loads(args)
-                            is_valid_json = True
                     except ValueError:
                         is_valid_json = False
 
-                    if not args.strip():
+                    if not args.strip() and p_req==True:
                         r_c5.error("Required ⚠️")
                         all_args_filled = False
                     elif not is_valid_json:
@@ -196,7 +197,7 @@ class UIComponents:
                             "col": col_name, 
                             "rid": sel_rule.split(" - ")[0].strip(), 
                             "crit": crit, 
-                            "args": args
+                            "args": args if p_req else p_val
                         })
 
         st.divider()

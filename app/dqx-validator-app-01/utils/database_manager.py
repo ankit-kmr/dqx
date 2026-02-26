@@ -73,7 +73,7 @@ class DatabaseManager:
 
     @st.cache_data(ttl=600, show_spinner=False)
     def fetch_rule_definitions(_self, catalog, config_schema):
-        query = f"SELECT rule_id, rule_name, rule_dimension, argument_placeholder, CONCAT(rule_id, ' - ', rule_name) AS rule_info FROM {catalog}.{config_schema}.dqx_rule_definitions"
+        query = f"SELECT rule_id, rule_name, rule_dimension, argument_placeholder, is_arg_mendatory, CONCAT(rule_id, ' - ', rule_name) AS rule_info FROM {catalog}.{config_schema}.dqx_rule_definitions"
         with _self.get_connection().cursor() as cursor:
             cursor.execute(query)
             data = cursor.fetchall()
@@ -86,9 +86,25 @@ class DatabaseManager:
             cursor.execute(query)
             return [row[0] for row in cursor.fetchall()]
 
+    
+    def _replace_placeholders(self, data, column_name):
+        """Recursively replaces <value> with the actual column name."""
+        if isinstance(data, str):
+            return data.replace("<value>", column_name)
+        elif isinstance(data, list):
+            return [self._replace_placeholders(item, column_name) for item in data]
+        elif isinstance(data, dict):
+            return {k: self._replace_placeholders(v, column_name) for k, v in data.items()}
+        return data
+    
+    
     def register_dq_rule(self, catalog, config_schema, src_schema, table, col, rule_id, criticality, args_dict):
         source_full_path = f"{catalog}.{src_schema}.{table}"
         
+        # Replace <value> placeholders in the arguments dictionary
+        if args_dict:
+            args_dict = self._replace_placeholders(args_dict, col)
+
         if args_dict:
             # Escape single quotes for SQL safety and format the key-value pairs
             kv_pairs = []
