@@ -35,7 +35,7 @@ class DatabaseManager:
             table_data = cursor.fetchall()
             return [row[1] for row in table_data] if table_data else []
 
-    @st.cache_data(ttl=300, show_spinner=False)
+    @st.cache_data(ttl=30, show_spinner=False)
     def fetch_table_definition(_self, catalog, schema, table):
         with _self.get_connection().cursor() as cursor:
             cursor.execute(f"DESCRIBE TABLE {catalog}.{schema}.{table}")
@@ -54,8 +54,8 @@ class DatabaseManager:
             df.columns = ['col_name', 'data_type']
             return df
 
-    @st.cache_data(ttl=300, show_spinner=False)
-    def fetch_dqx_mappings(_self, catalog, config_schema, src_schema, table):
+    @st.cache_data(ttl=30, show_spinner=False)
+    def fetch_dqx_mappings(_self, catalog, config_schema, src_catalog, src_schema, table):
         query = f"""
         WITH ranked_rules AS (
             SELECT m.column_name AS column, r.rule_dimension, r.rule_name, r.description as rule_description,
@@ -63,7 +63,7 @@ class DatabaseManager:
                    ROW_NUMBER() OVER (PARTITION BY m.table_name, m.column_name, r.rule_function ORDER BY m.updated_at DESC) as row_num
             FROM {catalog}.{config_schema}.dqx_rule_mappings m
             JOIN {catalog}.{config_schema}.dqx_rule_definitions r ON m.rule_id = r.rule_id
-            WHERE m.table_name = '{catalog}.{src_schema}.{table}' AND m.is_active = true
+            WHERE m.table_name = '{src_catalog}.{src_schema}.{table}' AND m.is_active = true
         ) SELECT * FROM ranked_rules WHERE row_num = 1
         """
         with _self.get_connection().cursor() as cursor:
@@ -129,9 +129,47 @@ class DatabaseManager:
             return True, "Success"
         except Exception as e: return False, str(e)
 
+    
     def deactivate_dq_rule(self, catalog, config_schema, full_table_path, col, rule_id):
         query = f"UPDATE {catalog}.{config_schema}.dqx_rule_mappings SET is_active = false, updated_at = current_timestamp() WHERE table_name = '{full_table_path}' AND column_name = '{col}' AND rule_id = '{rule_id}'"
         try:
             with self.get_connection().cursor() as cursor: cursor.execute(query)
             return True
         except: return False
+    
+
+    def merge_rule_definition(self, catalog, schema, p):
+        query = f"""
+        MERGE INTO {catalog}.{schema}.dqx_rule_definitions AS target
+        USING (
+            SELECT 
+                '{p['rule_id']}' as rule_id, 
+                '{p['rule_name']}' as rule_name, 
+                '{p['rule_func']}' as rule_function,
+                '{p['desc']}' as description,
+                '{p['type']}' as rule_type,
+                '{p['dim']}' as rule_dimension,
+                '{p['placeholder']}' as argument_placeholder,
+                {p['mandatory']} as is_arg_mendatory
+        ) AS source
+        ON target.rule_id = source.rule_id
+        WHEN MATCHED THEN
+            UPDATE SET 
+                rule_name = source.rule_name,
+                rule_function = source.rule_function,
+                description = source.description,
+                rule_type = source.rule_type,
+                rule_dimension = source.rule_dimension,
+                updated_date = current_timestamp(),
+                argument_placeholder = source.argument_placeholder,
+                is_arg_mendatory = source.is_arg_mendatory
+        WHEN NOT MATCHED THEN
+            INSERT (rule_id, rule_name, rule_function, description, rule_type, 
+                    rule_dimension, created_date, updated_date, argument_placeholder, is_arg_mendatory)
+            VALUES (source.rule_id, source.rule_name, source.rule_function, source.description, source.rule_type, 
+                    source.rule_dimension, current_timestamp(), current_timestamp(), source.argument_placeholder, source.is_arg_mendatory)
+        """
+        try:
+            with self.get_connection().cursor() as cursor: cursor.execute(query)
+            return True, "Success"
+        except Exception as e: return False, str(e)

@@ -19,12 +19,13 @@ HOST = config.get(env, 'server_hostname')
 PATH = config.get(env, 'http_path')
 TOKEN = config.get(env, 'token')
 JOB_ID = config.get(env, 'job_id')
-config_schema = config.get('DEFAULT', 'config_schema_input')
+config_catalog = config.get('DEFAULT', 'dqx_catalog_name')
+config_schema = config.get('DEFAULT', 'dqx_config_schema')
 
 # --- 3. Initialize Managers ---
 db = DatabaseManager(HOST, PATH, TOKEN)
 wm = WorkflowManager(HOST, TOKEN, JOB_ID)
-ui = UIComponents(db, wm, config_schema)
+ui = UIComponents(db, wm, config_catalog, config_schema)
 StateManager.initialize()
 
 # --- 4. Main UI Sidebar Navigation ---
@@ -51,7 +52,13 @@ with st.sidebar:
 
 # --- 5. Main Content Area ---
 if cat_select != "-- Select --" and table_select != "-- Select --":
-    tab_labels = ["📋 Table Overview", "🧬 Columns Details", "🛡️ Manage DQ Rules & Run", "✅ ADD NEW DQ Rules"]
+    tab_labels = [
+        "📋 Table Overview", 
+        "🧬 Columns Details", 
+        "🛡️ Manage DQ Mapping & Run", 
+        "🆕 ADD New DQ Mapping", 
+        "✅ Manage DQ Rules"
+    ]
     active_tab = st.radio("Navigation", options=tab_labels, horizontal=True, key="active_tab_nav")
     st.divider()
 
@@ -61,10 +68,13 @@ if cat_select != "-- Select --" and table_select != "-- Select --":
     elif active_tab == "🧬 Columns Details":
         ui.render_column_details(cat_select, schema_select, table_select)
 
-    elif active_tab == "🛡️ Manage DQ Rules & Run":
-        ui.render_existing_rules(cat_select, schema_select, table_select)
+    elif active_tab == "🛡️ Manage DQ Mapping & Run":
+        ui.render_manage_dq_mapping(cat_select, schema_select, table_select)
 
-    elif active_tab == "✅ ADD NEW DQ Rules":
-        ui.render_add_rules(cat_select, schema_select, table_select)
+    elif active_tab == "🆕 ADD New DQ Mapping":
+        ui.render_add_rules_mapping(cat_select, schema_select, table_select)
+    
+    elif active_tab == "✅ Manage DQ Rules":
+        ui.render_manage_rule_creation(cat_select)
 else:
     st.info("👈 Please select a Catalog, Schema, and Table from the sidebar to begin.")

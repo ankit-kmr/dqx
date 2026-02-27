@@ -2,12 +2,13 @@ import streamlit as st
 import json
 import pandas as pd
 import time
-
+import re
 
 class UIComponents:
-    def __init__(self, db_manager, workflow_manager, config_schema):
+    def __init__(self, db_manager, workflow_manager, config_catalog, config_schema):
         self.db = db_manager
         self.wm = workflow_manager
+        self.config_catalog = config_catalog
         self.config_schema = config_schema
 
     def reset_configuration_form(self):
@@ -38,9 +39,9 @@ class UIComponents:
         df = self.db.fetch_columns(cat, schema, table)
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-    def render_existing_rules(self, cat, schema, table):
+    def render_manage_dq_mapping(self, cat, schema, table):
         st.subheader("🛡️ Active Rules")
-        df_mappings = self.db.fetch_dqx_mappings(cat, self.config_schema, schema, table)
+        df_mappings = self.db.fetch_dqx_mappings(self.config_catalog, self.config_schema, cat, schema, table)
         
         # Determine if we have rules to run
         has_rules = not df_mappings.empty
@@ -98,22 +99,22 @@ class UIComponents:
                      help="No rules found to execute" if not has_rules else "Trigger Databricks Workflow"):
             
             with st.spinner("Triggering Workflow..."):
-                resp = self.wm.trigger_workflow(cat, self.config_schema, schema, table)
+                resp = self.wm.trigger_workflow(self.config_catalog, cat, self.config_schema, schema, table)
                 if resp.status_code == 200:
                     st.success(f"✅ Triggered! Run ID: {resp.json().get('run_id')}")
                 else:
                     st.error(resp.text)
 
-    def render_add_rules(self, cat, schema, table):
-        st.subheader("✅ Configure New Rules")
+    def render_add_rules_mapping(self, cat, schema, table):
+        st.subheader("✅ Configure New Rules Mapping")
         col_title, col_reset = st.columns([8, 2])
         if col_reset.button("🧹Clear", use_container_width=True, help="Clear all inputs and reset column visibility"):
             self.reset_configuration_form()
         # ---------------------------------------
 
         # 1. Fetch metadata needed for the form
-        dims = self.db.fetch_rule_dimensions(cat, self.config_schema)
-        df_rules = self.db.fetch_rule_definitions(cat, self.config_schema)
+        dims = self.db.fetch_rule_dimensions(self.config_catalog, self.config_schema)
+        df_rules = self.db.fetch_rule_definitions(self.config_catalog, self.config_schema)
         df_cols = self.db.fetch_columns(cat, schema, table)
 
         bulk_configs = []
@@ -167,7 +168,7 @@ class UIComponents:
                 
                 # Dynamic Placeholder and Example Text Autofill
                 example_text = f"e.g: {p_val}"
-                autofill_key = f"autofill_{row_key}"
+                # autofill_key = f"autofill_{row_key}"
                 args = r_c5.text_input("Args", placeholder=p_val, label_visibility="collapsed", key=f"args_{row_key}")
                 r_c5.caption(example_text)
 
@@ -256,7 +257,7 @@ class UIComponents:
             st.subheader("🛡️ Active Rule Mappings")
             
             # Re-fetch the newly registered rules
-            df_mappings_updated = self.db.fetch_dqx_mappings(cat, self.config_schema, schema, table)
+            df_mappings_updated = self.db.fetch_dqx_mappings(self.config_catalog, self.config_schema, cat, schema, table)
             selected_cols = ["column", "rule_dimension", "rule_name", "rule_description", "criticality", "arguments"]
             if not df_mappings_updated.empty:
                 st.dataframe(df_mappings_updated[selected_cols], use_container_width=True, hide_index=True)
@@ -265,7 +266,7 @@ class UIComponents:
                 st.subheader("🚀 Execution")
                 if st.button("Run DQX Checks", type="primary", key="run_checks_final"):
                     with st.spinner("Connecting to Databricks..."):
-                        response = self.wm.trigger_workflow(cat, self.config_schema, schema, table)
+                        response = self.wm.trigger_workflow(self.config_catalog, cat, self.config_schema, schema, table)
                         if response.status_code == 200:
                             run_id = response.json().get('run_id')
                             st.success(f"✅ Workflow Triggered Successfully! Run ID: `{run_id}`")
@@ -273,3 +274,110 @@ class UIComponents:
                             st.error(f"Workflow Trigger Failed: {response.text}")
             else:
                 st.warning("No mappings found. Please ensure the registration was successful.")
+
+
+    def render_manage_rule_creation(self, cat):
+        st.subheader("🛠️ Add New Rule Definitions")
+
+        # Initialize session state for the pending rules list
+        if "pending_rule_definitions" not in st.session_state:
+            st.session_state.pending_rule_definitions = []
+
+        # 1. Fetch existing for ID suggestion (considering both DB and pending list)
+        df_existing = self.db.fetch_rule_definitions(self.config_catalog, self.config_schema)
+        
+        # Calculate next ID based on DB + what's already in the pending list
+        existing_ids = []
+        if not df_existing.empty:
+            existing_ids.extend(df_existing['rule_id'].tolist())
+        existing_ids.extend([r['rule_id'] for r in st.session_state.pending_rule_definitions])
+        
+        if existing_ids:
+            # Extract numeric parts and find max
+            numeric_ids = [int(re.search(r'\d+', i).group()) for i in existing_ids if re.search(r'\d+', i)]
+            next_id = f"R{max(numeric_ids) + 1:03d}" if numeric_ids else "R001"
+        else:
+            next_id = "R001"
+
+        # 2. UI Form for Rule Metadata
+        # clear_on_submit=True resets the text inputs automatically after adding
+        with st.form("admin_rule_form", clear_on_submit=True):
+            st.markdown("### 📝 Enter Rule Details")
+            c1, c2, c3 = st.columns([1, 2, 2])
+            rule_id = c1.text_input("Rule ID", value=next_id)
+            rule_name = c2.text_input("Rule Name")
+            rule_func = c3.text_input("Rule Function")
+
+            description = st.text_area("Description")
+
+            c4, c5, c6 = st.columns(3)
+            rule_type = c4.selectbox("Rule Type", ["row_level", "table_level", "regex"])
+            dims = self.db.fetch_rule_dimensions(self.config_catalog, self.config_schema)
+            rule_dim = c5.selectbox("Dimension", options=dims if dims else ["Completeness", "Accuracy", "Validity"])
+            is_mandatory = c6.selectbox("Is Argument Mandatory?", [True, False])
+
+            st.markdown("---")
+            st.write("🔧 **Argument Placeholder Builder**")
+            k1, v1 = st.columns(2)
+            arg_key = k1.text_input("Key", value="column")
+            arg_val = v1.text_input("Example Value", value="<value>")
+            
+            placeholder_str = f'{{"{arg_key}":"{arg_val}"}}'
+            st.caption(f"Preview: `{placeholder_str}`")
+
+            add_button = st.form_submit_button("➕", type="secondary", use_container_width=True)
+
+            if add_button:
+                if not rule_name or not rule_func or not placeholder_str:
+                    st.error("Rule Name, Function and Arguments are required.")
+                else:
+                    new_entry = {
+                        "rule_id": rule_id,
+                        "rule_name": rule_name,
+                        "rule_func": rule_func,
+                        "desc": description,
+                        "type": rule_type,
+                        "dim": rule_dim,
+                        "placeholder": placeholder_str,
+                        "mandatory": str(is_mandatory).upper()
+                    }
+                    st.session_state.pending_rule_definitions.append(new_entry)
+                    st.rerun()
+
+        # 3. Display Pending Rules Table
+        if st.session_state.pending_rule_definitions:
+            st.divider()
+            st.markdown(f"### 📋 Rules to be Saved ({len(st.session_state.pending_rule_definitions)})")
+            
+            # Convert list to DataFrame for display
+            df_pending = pd.DataFrame(st.session_state.pending_rule_definitions)
+            st.dataframe(df_pending, use_container_width=True, hide_index=True)
+
+            col_save, col_clear = st.columns([1, 1])
+            
+            # Save all rules at once
+            if col_save.button("💾 Save All", type="primary", use_container_width=True):
+                success_count = 0
+                total = len(st.session_state.pending_rule_definitions)
+                
+                with st.spinner(""):
+                    for rule_payload in st.session_state.pending_rule_definitions:
+                        success, msg = self.db.merge_rule_definition(
+                            self.config_catalog, 
+                            self.config_schema, 
+                            rule_payload
+                        )
+                        if success:
+                            success_count += 1
+                
+                if success_count == total:
+                    st.toast(f"Successfully saved {success_count} rules!", icon="✅")
+                    st.session_state.pending_rule_definitions = []
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error(f"Saved {success_count}/{total} rules. Check DB logs for errors.")
+
+            if col_clear.button("🗑️ Clear List", use_container_width=True):
+                st.session_state.pending_rule_definitions = []
+                st.rerun()

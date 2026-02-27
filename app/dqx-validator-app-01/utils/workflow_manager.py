@@ -6,13 +6,14 @@ class WorkflowManager:
         self.token = token
         self.job_id = job_id
 
-    def trigger_workflow(self, catalog, config, src, table):
+    def trigger_workflow(self, config_catalog, source_catalog, config, src, table):
         api_url = f"https://{self.hostname}/api/2.1/jobs/run-now"
         headers = {"Authorization": f"Bearer {self.token}"}
         payload = {
             "job_id": self.job_id,
             "job_parameters": {
-                "catalog_name": catalog,
+                "config_catalog_name": config_catalog,
+                "source_catalog_name": source_catalog,
                 "config_schema_name": config,
                 "source_schema_name": src,
                 "table_name": table
