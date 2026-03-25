@@ -137,39 +137,3 @@ class DatabaseManager:
             return True
         except: return False
     
-
-    def merge_rule_definition(self, catalog, schema, p):
-        query = f"""
-        MERGE INTO {catalog}.{schema}.dqx_rule_definitions AS target
-        USING (
-            SELECT 
-                '{p['rule_id']}' as rule_id, 
-                '{p['rule_name']}' as rule_name, 
-                '{p['rule_func']}' as rule_function,
-                '{p['desc']}' as description,
-                '{p['type']}' as rule_type,
-                '{p['dim']}' as rule_dimension,
-                '{p['placeholder']}' as argument_placeholder,
-                {p['mandatory']} as is_arg_mendatory
-        ) AS source
-        ON target.rule_id = source.rule_id
-        WHEN MATCHED THEN
-            UPDATE SET 
-                rule_name = source.rule_name,
-                rule_function = source.rule_function,
-                description = source.description,
-                rule_type = source.rule_type,
-                rule_dimension = source.rule_dimension,
-                updated_date = current_timestamp(),
-                argument_placeholder = source.argument_placeholder,
-                is_arg_mendatory = source.is_arg_mendatory
-        WHEN NOT MATCHED THEN
-            INSERT (rule_id, rule_name, rule_function, description, rule_type, 
-                    rule_dimension, created_date, updated_date, argument_placeholder, is_arg_mendatory)
-            VALUES (source.rule_id, source.rule_name, source.rule_function, source.description, source.rule_type, 
-                    source.rule_dimension, current_timestamp(), current_timestamp(), source.argument_placeholder, source.is_arg_mendatory)
-        """
-        try:
-            with self.get_connection().cursor() as cursor: cursor.execute(query)
-            return True, "Success"
-        except Exception as e: return False, str(e)
