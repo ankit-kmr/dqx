@@ -16,21 +16,21 @@ class StateManager:
 
     @staticmethod
     def reset_portal():
-        # Clear specific selection keys
+        # 1. Clear specific UI widget keys
         keys_to_reset = ["cat_select", "schema_select", "table_select"]
-        for key in keys_to_reset:
-            if key in st.session_state:
+        
+        # 2. Clear dynamic rule input keys (the prefix check)
+        prefixes = ["dim_t4_", "rule_t4_", "crit_t4_", "args_t4_"]
+        
+        for key in list(st.session_state.keys()):
+            if key in keys_to_reset or any(p in key for p in prefixes):
                 del st.session_state[key]
         
-        # Clear data logic states
+        # 3. Reset internal logic states
         st.session_state.column_rule_counts = {}
         st.session_state.hidden_columns = set()
         st.session_state.rules_to_deactivate = []
-        
-        # Clear specific input widgets
-        keys_to_clear = [k for k in st.session_state.keys() if any(prefix in k for prefix in ["dim_t4_", "rule_t4_", "crit_t4_", "args_t4_"])]
-        for key in keys_to_clear:
-            del st.session_state[key]
+        st.session_state.show_execution_summary = False
             
         st.cache_data.clear()
         st.rerun()

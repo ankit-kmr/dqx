@@ -24,12 +24,18 @@ JOB_ID = config.get(env, 'job_id')
 config_catalog = config.get('DEFAULT', 'dqx_catalog_name')
 config_schema = config.get('DEFAULT', 'dqx_config_schema')
 
+
 # --- 3. Initialize Managers ---
-db = DatabaseManager(HOST, PATH, TOKEN)
-wm = WorkflowManager(HOST, TOKEN, JOB_ID)
-ui = UIComponents(db, wm, config_catalog, config_schema)
-dqx_h = dqx_handler()
-dqx_ui = DqxUIComponents(db, dqx_h)
+@st.cache_resource(show_spinner='Loading...')
+def init_managers():
+    db = DatabaseManager(HOST, PATH, TOKEN)
+    wm = WorkflowManager(HOST, TOKEN, JOB_ID)
+    ui = UIComponents(db, wm, config_catalog, config_schema)
+    dqx_h = dqx_handler()
+    dqx_ui = DqxUIComponents(db, dqx_h)
+    return db, wm, ui, dqx_h, dqx_ui
+
+db, wm, ui, dqx_h, dqx_ui = init_managers()
 StateManager.initialize()
 
 # --- 4. Main UI Sidebar Navigation ---
@@ -61,7 +67,8 @@ if cat_select != "-- Select --" and table_select != "-- Select --":
         "🧬 Columns Details", 
         "🛡️ Manage DQ Mapping & Run", 
         "🆕 ADD New DQ Mapping",
-        "🧪 Profiling & Check Generator"
+        "🧪 Profiling & Check Generator",
+        "🤖 AI-Assisted Check Generation"
     ]
     active_tab = st.radio("Navigation", options=tab_labels, horizontal=True, key="active_tab_nav")
     st.divider()
@@ -80,6 +87,9 @@ if cat_select != "-- Select --" and table_select != "-- Select --":
     
     elif active_tab == "🧪 Profiling & Check Generator":
         dqx_ui.render_profile_generator(cat_select, schema_select, table_select)
+    
+    elif active_tab == "🤖 AI-Assisted Check Generation":
+        dqx_ui.render_ai_check_generator(cat_select, schema_select, table_select)
 
 else:
     st.info("👈 Please select a Catalog, Schema, and Table from the sidebar to begin.")
