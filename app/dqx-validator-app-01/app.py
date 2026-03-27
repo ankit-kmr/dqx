@@ -4,6 +4,8 @@ from utils.state_manager import StateManager
 from utils.database_manager import DatabaseManager
 from utils.workflow_manager import WorkflowManager
 from utils.ui_components import UIComponents
+from utils.dq_checks_handler import dqx_handler
+from utils.dqx_ui_components import DqxUIComponents
 
 # --- 1. Page Configuration ---
 st.set_page_config(layout="wide", page_title="DQX Validator Portal")
@@ -26,6 +28,8 @@ config_schema = config.get('DEFAULT', 'dqx_config_schema')
 db = DatabaseManager(HOST, PATH, TOKEN)
 wm = WorkflowManager(HOST, TOKEN, JOB_ID)
 ui = UIComponents(db, wm, config_catalog, config_schema)
+dqx_h = dqx_handler()
+dqx_ui = DqxUIComponents(db, dqx_h)
 StateManager.initialize()
 
 # --- 4. Main UI Sidebar Navigation ---
@@ -56,8 +60,8 @@ if cat_select != "-- Select --" and table_select != "-- Select --":
         "📋 Table Overview", 
         "🧬 Columns Details", 
         "🛡️ Manage DQ Mapping & Run", 
-        "🆕 ADD New DQ Mapping", 
-        "✅ Manage DQ Rules"
+        "🆕 ADD New DQ Mapping",
+        "🧪 Profiling & Check Generator"
     ]
     active_tab = st.radio("Navigation", options=tab_labels, horizontal=True, key="active_tab_nav")
     st.divider()
@@ -74,7 +78,8 @@ if cat_select != "-- Select --" and table_select != "-- Select --":
     elif active_tab == "🆕 ADD New DQ Mapping":
         ui.render_add_rules_mapping(cat_select, schema_select, table_select)
     
-    elif active_tab == "✅ Manage DQ Rules":
-        ui.render_manage_rule_creation(cat_select)
+    elif active_tab == "🧪 Profiling & Check Generator":
+        dqx_ui.render_profile_generator(cat_select, schema_select, table_select)
+
 else:
     st.info("👈 Please select a Catalog, Schema, and Table from the sidebar to begin.")
