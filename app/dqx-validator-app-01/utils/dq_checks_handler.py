@@ -3,7 +3,7 @@ from databricks.sdk import WorkspaceClient
 from databricks.labs.dqx.profiler.profiler import DQProfiler
 from databricks.labs.dqx.config import LLMModelConfig,InputConfig
 from databricks.labs.dqx.profiler.generator import DQGenerator
-
+import streamlit as st
 
 class dqx_handler:
     def __init__(self):
@@ -18,15 +18,17 @@ class dqx_handler:
         self.llm_cfg = LLMModelConfig("databricks/databricks-meta-llama-3-1-8b-instruct")
         self.generator = DQGenerator(self.ws, llm_model_config=self.llm_cfg)
 
-    def profile_check(self, input_table_name, columns_list=[]):
-        summary_stats, profiles = self.profiler.profile_table(
+    @st.cache_data(ttl=600, show_spinner='Loading...')
+    def profile_check(_self, input_table_name, columns_list=[]):
+        summary_stats, profiles = _self.profiler.profile_table(
             input_config=InputConfig(location=input_table_name),
             columns=columns_list
         )
         return summary_stats, profiles
     
-    def generate_profile_checks(self, summary_stats, profiles):
-        return self.generator.generate_dq_rules(profiles)
+    @st.cache_data(ttl=600, show_spinner='Loading...')
+    def generate_profile_checks(_self, summary_stats, profiles):
+        return _self.generator.generate_dq_rules(profiles)
     
     def ai_assisted_rule_generation(self, user_prompt, input_table_name):
         return self.generator.generate_dq_rules_ai_assisted(
