@@ -16,26 +16,26 @@ class DatabaseManager:
             access_token=self.token
         )
 
-    @st.cache_data(ttl=600, show_spinner=False)
+    @st.cache_data(ttl=1200, show_spinner=False)
     def fetch_catalogs(_self):
         with _self.get_connection().cursor() as cursor:
             cursor.execute("SHOW CATALOGS")
             return [row[0] for row in cursor.fetchall()]
 
-    @st.cache_data(ttl=600, show_spinner=False)
+    @st.cache_data(ttl=1200, show_spinner=False)
     def fetch_schemas(_self, catalog_name):
         with _self.get_connection().cursor() as cursor:
             cursor.execute(f"SHOW SCHEMAS IN {catalog_name}")
             return [row[0] for row in cursor.fetchall()]
 
-    @st.cache_data(ttl=300, show_spinner=False)
+    @st.cache_data(ttl=1200, show_spinner=False)
     def fetch_tables(_self, catalog, schema):
         with _self.get_connection().cursor() as cursor:
             cursor.execute(f"SHOW TABLES IN {catalog}.{schema}")
             table_data = cursor.fetchall()
             return [row[1] for row in table_data] if table_data else []
 
-    @st.cache_data(ttl=30, show_spinner=False)
+    @st.cache_data(ttl=1200, show_spinner=False)
     def fetch_table_definition(_self, catalog, schema, table):
         with _self.get_connection().cursor() as cursor:
             cursor.execute(f"DESCRIBE TABLE {catalog}.{schema}.{table}")
@@ -44,7 +44,7 @@ class DatabaseManager:
             rows = cursor.fetchone()[0]
             return f"catalog_name: {catalog}\ntable_name: {table}\ntotal_columns: {len(cols)}\nrow_count: {rows}"
 
-    @st.cache_data(ttl=300, show_spinner=False)
+    @st.cache_data(ttl=1200, show_spinner=False)
     def fetch_columns(_self, catalog, schema, table):
         with _self.get_connection().cursor() as cursor:
             cursor.execute(f"DESCRIBE TABLE {catalog}.{schema}.{table}")
@@ -79,7 +79,7 @@ class DatabaseManager:
             data = cursor.fetchall()
             return pd.DataFrame(data, columns=[d[0] for d in cursor.description]) if data else pd.DataFrame()
 
-    @st.cache_data(ttl=600, show_spinner=False)
+    @st.cache_data(ttl=1200, show_spinner=False)
     def fetch_rule_dimensions(_self, catalog, config_schema):
         query = f"SELECT DISTINCT rule_dimension FROM {catalog}.{config_schema}.dqx_rule_definitions WHERE rule_dimension IS NOT NULL"
         with _self.get_connection().cursor() as cursor:

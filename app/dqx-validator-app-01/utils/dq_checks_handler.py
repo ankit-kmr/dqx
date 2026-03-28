@@ -18,7 +18,7 @@ class dqx_handler:
         self.llm_cfg = LLMModelConfig("databricks/databricks-meta-llama-3-1-8b-instruct")
         self.generator = DQGenerator(self.ws, llm_model_config=self.llm_cfg)
 
-    @st.cache_data(ttl=600, show_spinner='Loading...')
+    @st.cache_data(ttl=1200, show_spinner='Loading...')
     def profile_check(_self, input_table_name, columns_list=[]):
         summary_stats, profiles = _self.profiler.profile_table(
             input_config=InputConfig(location=input_table_name),
@@ -26,7 +26,7 @@ class dqx_handler:
         )
         return summary_stats, profiles
     
-    @st.cache_data(ttl=600, show_spinner='Loading...')
+    @st.cache_data(ttl=1200, show_spinner='Loading...')
     def generate_profile_checks(_self, summary_stats, profiles):
         return _self.generator.generate_dq_rules(profiles)
     
@@ -35,6 +35,10 @@ class dqx_handler:
             user_input=user_prompt,
             input_config=InputConfig(location=input_table_name)
         )
+
+    def ai_detect_primary_checks(self, input_table_name):
+        return self.profiler.detect_primary_keys_with_llm(
+            input_config=InputConfig(location=input_table_name)
 
 
 if __name__ == "__main__":
