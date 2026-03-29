@@ -49,7 +49,7 @@ cli = [
     # The databricks-connect includes pyspark, pandas and numpy.
     # On Windows, Build Tools for Visual Studio are required to compile numpy.
     # Spark in local mode is not supported with databricks-connect.
-    "databricks-connect~=15.4",
+    "databricks-connect>=15.4,<17.0",
 ]
 pii = [
     "numpy<2.0,>=1.20",
