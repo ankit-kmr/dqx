@@ -93,7 +93,7 @@ class DqxUIComponents:
                 
                 profile_checks_json = json.dumps(profile_checks, indent=2, default=self.dqx.json_serial)
                 profile_checks_yaml = yaml.dump(profile_checks, default_flow_style=False)
-                btn_col3, btn_col4 = st.columns(2)
+                btn_col3, btn_col4, _ = st.columns([1, 1, 0.1])
                 with btn_col3:
                     st.download_button(
                         label="📥 Download Profile Checks (JSON)",
