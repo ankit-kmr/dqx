@@ -9,6 +9,7 @@ import json
 from datetime import date, datetime
 import time
 
+
 class dqx_handler:
     def __init__(self):
         try:
@@ -68,7 +69,7 @@ class dqx_handler:
         profiles = data.get("profiles")
         if columns_list:
             summary_stats = {col: summary_stats.get(col) for col in columns_list if col in summary_stats}
-            profiles = [profile for profile in profiles if profile.get("column") in columns_list]
+            profiles = [profile for profile in profiles if profile["column"] in columns_list]
         return summary_stats, profiles
 
 
@@ -96,6 +97,8 @@ class dqx_handler:
 
 if __name__ == "__main__":
     handler = dqx_handler()
+    print(handler.ws.config.host)
+    print(handler.ws.config.token)
     tbl = 'dqx_sandbox.dqx_bronze.customer'
     inp = """
     Phone numbers should follow standard format.
@@ -103,10 +106,10 @@ if __name__ == "__main__":
     customer_state is a string with less than 5 letter.
     """
     handler.save_profile_data(tbl, handler.spark.read.table(tbl).columns)
-    res_summary_stats, res_profiles = handler.load_profile_data(tbl, ["customer_state","customer_phone","customer_email"])
+    res_summary_stats, res_profiles = handler.load_profile_data(tbl, ["customer_phone","customer_email"])
     checks = handler.generate_profile_checks(res_profiles,tbl)
     print(res_summary_stats,'\n',res_profiles)
     print(checks)
     # print(handler.ai_assisted_rule_generation(inp,tbl))
-    # print(handler.ai_detect_primary_key(tbl))
+    print(handler.ai_detect_primary_key(tbl))
 

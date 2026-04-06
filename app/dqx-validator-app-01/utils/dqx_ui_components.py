@@ -149,7 +149,7 @@ class DqxUIComponents:
             st.divider()
 
             # 6. Bulk Save Logic (Moved outside the nested IF)
-            if st.button("💾 Save Bulk Profile Checks to DB", use_container_width=True, type="primary"):
+            if st.button("💾 Save Checks ", use_container_width=True, type="primary"):
                 bulk_configs = st.session_state.get(f"bulk_configs_{full_table_name}", [])
                 
                 with st.spinner("⏳ Inserting records into database..."):
