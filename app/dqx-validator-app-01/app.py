@@ -30,12 +30,13 @@ config_schema = config.get('DEFAULT', 'dqx_config_schema')
 def init_managers():
     db = DatabaseManager(HOST, PATH, TOKEN)
     wm = WorkflowManager(HOST, TOKEN, JOB_ID)
-    ui = UIComponents(db, wm, config_catalog, config_schema)
     dqx_h = dqx_handler()
-    dqx_ui = DqxUIComponents(db, dqx_h)
-    return db, wm, ui, dqx_h, dqx_ui
+    return db, wm, dqx_h
 
-db, wm, ui, dqx_h, dqx_ui = init_managers()
+db, wm, dqx_h = init_managers()
+
+ui = UIComponents(db, wm, config_catalog, config_schema)
+dqx_ui = DqxUIComponents(db, dqx_h, config_catalog, config_schema)
 StateManager.initialize()
 
 # --- 4. Main UI Sidebar Navigation ---

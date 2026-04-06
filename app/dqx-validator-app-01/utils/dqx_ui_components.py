@@ -6,9 +6,34 @@ import yaml
 
 
 class DqxUIComponents:
-    def __init__(self, db_manager, dqx_h):
+    def __init__(self, db_manager, dqx_h , config_catalog , config_schema):
         self.db = db_manager
         self.dqx = dqx_h
+        self.config_catalog = config_catalog
+        self.config_schema = config_schema
+        
+    def create_bulk_configs(self, profile_checks, rule_definitions_df=None):
+        bulk_configs = []
+        for check in profile_checks:
+            if isinstance(check, dict) and "check" in check:
+                col_name = check["check"]["arguments"].get("column")
+                rule_func = check["check"]['function']
+                crit = check.get("criticality")
+                args = check["check"]["arguments"]
+                rid = None
+                if rule_definitions_df is not None and rule_func:
+                    rule_row = rule_definitions_df.loc[
+                        rule_definitions_df['rule_function'].str.lower() == rule_func.lower()
+                    ]
+                    if not rule_row.empty:
+                        rid = rule_row.iloc[0]['rule_id']
+                bulk_configs.append({
+                    "col": col_name,
+                    "rid": rid,
+                    "crit": crit,
+                    "args": args
+                })
+        return bulk_configs
 
 
     def render_profile_generator(self, cat, schema, table):
@@ -50,7 +75,7 @@ class DqxUIComponents:
         st.divider()
 
         # 2. Action Buttons
-        btn_col1, btn_col2, _ = st.columns([2, 2, 4])
+        btn_col1, btn_col2, _, _ = st.columns([2, 2, 2, 4])
         
         gen_pressed = btn_col1.button("Generate Profile Summary", type="primary", use_container_width=True)
         save_pressed = btn_col2.button("Save Profile Summary", use_container_width=True, type="secondary")
@@ -61,6 +86,7 @@ class DqxUIComponents:
                 self.dqx.save_profile_data(full_table_name, columns_list=all_columns)
                 st.success(f"Profile data for {full_table_name} updated successfully!")
 
+        
         # 4. Generate/Display Logic
         if gen_pressed:
             if not selected_columns:
@@ -71,44 +97,75 @@ class DqxUIComponents:
                 res_summary_stats, res_profiles = self.dqx.load_profile_data(full_table_name, selected_columns)
                 profile_checks = self.dqx.generate_profile_checks(res_profiles, full_table_name)
 
-                # Display Summary Stats
-                st.subheader("📊 Summary Stats")
-                st.dataframe(pd.DataFrame(res_summary_stats), use_container_width=True)
-                
-                summary_stats_json = json.dumps(res_summary_stats, indent=2, default=self.dqx.json_serial)
-                btn_col1, _ = st.columns(2)
-                with btn_col1:
-                    st.download_button(
-                        label="📥 Download Summary Stats (JSON)",
-                        data=summary_stats_json,
-                        file_name="summary_stats.json",
-                        mime="application/json"
-                    )
+                # --- SAVE TO SESSION STATE TO PERSIST AFTER CLICKING OTHER BUTTONS ---
+                st.session_state[f"active_profile_checks_{full_table_name}"] = profile_checks
+                st.session_state[f"active_summary_stats_{full_table_name}"] = res_summary_stats
+                st.session_state[f"bulk_configs_{full_table_name}"] = self.create_bulk_configs(
+                    profile_checks, 
+                    self.db.fetch_rule_definitions(self.config_catalog, self.config_schema)
+                )
 
-                st.divider()
+        # 5. Display Logic (Triggered if data exists in Session State)
+        if f"active_profile_checks_{full_table_name}" in st.session_state:
+            profile_checks = st.session_state[f"active_profile_checks_{full_table_name}"]
+            res_summary_stats = st.session_state[f"active_summary_stats_{full_table_name}"]
 
-                # Display Profile Checks
-                st.subheader("✅ Profile Checks")
-                st.dataframe(pd.DataFrame(profile_checks), use_container_width=True)
+            # Display Summary Stats
+            st.subheader("📊 Summary Stats")
+            st.dataframe(pd.DataFrame(res_summary_stats), use_container_width=True)
+            
+            summary_stats_json = json.dumps(res_summary_stats, indent=2, default=self.dqx.json_serial)
+            btn_col1, _ = st.columns(2)
+            with btn_col1:
+                st.download_button(
+                    label="📥 Download Summary Stats (JSON)",
+                    data=summary_stats_json,
+                    file_name="summary_stats.json",
+                    mime="application/json"
+                )
+
+            st.divider()
+
+            # Display Profile Checks
+            st.subheader("✅ Profile Checks")
+            st.dataframe(pd.DataFrame(profile_checks), use_container_width=True)
+            
+            btn_col3, btn_col4, _ = st.columns([1, 1, 0.1])
+            with btn_col3:
+                st.download_button(
+                    label="📥 Download Profile Checks (JSON)",
+                    data=json.dumps(profile_checks, indent=2, default=self.dqx.json_serial),
+                    file_name="profile_checks.json",
+                    mime="application/json"
+                )
+            with btn_col4:
+                st.download_button(
+                    label="📥 Download Profile Checks (YAML)",
+                    data=yaml.dump(profile_checks, default_flow_style=False),
+                    file_name="profile_checks.yaml",
+                    mime="text/yaml"
+                )
+
+            st.divider()
+
+            # 6. Bulk Save Logic (Moved outside the nested IF)
+            if st.button("💾 Save Bulk Profile Checks to DB", use_container_width=True, type="primary"):
+                bulk_configs = st.session_state.get(f"bulk_configs_{full_table_name}", [])
                 
-                profile_checks_json = json.dumps(profile_checks, indent=2, default=self.dqx.json_serial)
-                profile_checks_yaml = yaml.dump(profile_checks, default_flow_style=False)
-                btn_col3, btn_col4, _ = st.columns([1, 1, 0.1])
-                with btn_col3:
-                    st.download_button(
-                        label="📥 Download Profile Checks (JSON)",
-                        data=profile_checks_json,
-                        file_name="profile_checks.json",
-                        mime="application/json"
-                    )
-                with btn_col4:
-                    st.download_button(
-                        label="📥 Download Profile Checks (YAML)",
-                        data=profile_checks_yaml,
-                        file_name="profile_checks.yaml",
-                        mime="text/yaml",
-                        type="secondary"
-                    )
+                with st.spinner("⏳ Inserting records into database..."):
+                    try:
+                        self.db.reg_multiple_dq_rule(
+                            src_catalog=cat,
+                            config_catalog=self.config_catalog,
+                            config_schema=self.config_schema,
+                            src_schema=schema,
+                            table=table,
+                            rules_data=bulk_configs
+                        )
+                        st.success(f"✅ Success! {len(bulk_configs)} profile checks saved to database.")
+                    except Exception as e:
+                        st.error(f"❌ Error saving bulk profile checks: {str(e)}")
+
 
         
     def render_ai_check_generator(self, cat, schema, table):

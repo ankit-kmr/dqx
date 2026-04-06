@@ -4,6 +4,7 @@ import pandas as pd
 import time
 import re
 
+
 class UIComponents:
     def __init__(self, db_manager, workflow_manager, config_catalog, config_schema):
         self.db = db_manager
