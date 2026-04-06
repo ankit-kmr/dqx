@@ -73,7 +73,7 @@ class DatabaseManager:
             data = cursor.fetchall()
             return pd.DataFrame(data, columns=[d[0] for d in cursor.description]) if data else pd.DataFrame()
 
-    @st.cache_data(ttl=600, show_spinner=False)
+    @st.cache_data(ttl=900, show_spinner=False)
     def fetch_rule_definitions(_self, catalog, config_schema):
         query = f"SELECT rule_id, rule_function, rule_name, rule_dimension, argument_placeholder, is_arg_mendatory, CONCAT(rule_id, ' - ', rule_name) AS rule_info FROM {catalog}.{config_schema}.dqx_rule_definitions"
         with _self.get_connection().cursor() as cursor:

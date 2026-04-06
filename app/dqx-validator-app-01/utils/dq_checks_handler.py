@@ -1,7 +1,7 @@
 from databricks.connect import DatabricksSession
 from databricks.sdk import WorkspaceClient
 from databricks.labs.dqx.profiler.profiler import DQProfiler
-from databricks.labs.dqx.config import LLMModelConfig,InputConfig
+from databricks.labs.dqx.config import LLMModelConfig,InputConfig,LLMConfig
 from databricks.labs.dqx.profiler.generator import DQGenerator
 import streamlit as st
 import os
@@ -18,8 +18,9 @@ class dqx_handler:
             pass
         self.spark = DatabricksSession.builder.serverless().getOrCreate()
         self.ws = WorkspaceClient()
-        self.profiler = DQProfiler(workspace_client=self.ws)
-        self.llm_cfg = LLMModelConfig("databricks/databricks-meta-llama-3-1-8b-instruct")
+        self.llm_cfg = LLMModelConfig("databricks/databricks-meta-llama-3-3-70b-instruct")
+        # self.llm_cfg = LLMConfig("databricks/databricks-meta-llama-3-1-8b-instruct")
+        self.profiler = DQProfiler(workspace_client=self.ws, llm_model_config=self.llm_cfg)
         self.generator = DQGenerator(self.ws, llm_model_config=self.llm_cfg)
         self.profile_data_path = os.path.join(os.getcwd(), "profile_data")
         os.makedirs(self.profile_data_path, exist_ok=True)

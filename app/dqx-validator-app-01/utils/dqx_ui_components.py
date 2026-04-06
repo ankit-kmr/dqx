@@ -170,19 +170,20 @@ class DqxUIComponents:
         
     def render_ai_check_generator(self, cat, schema, table):
         st.subheader("AI-Assisted Rule Generation")
-        st.info("Describe your data quality requirements in natural language (e.g., 'Ensure emails follow a valid regex' or 'Salary cannot be negative').")
+        st.info("Describe your data quality requirements in natural language (e.g., 'Ensure emails follow a valid regex').")
 
         columns_df = self.db.fetch_columns(cat, schema, table)
-        column_list = columns_df['col_name'].tolist()
+        full_table_name = f"{cat}.{schema}.{table}"
+        
+        # Session State Keys
+        rules_key = f"active_ai_rules_{full_table_name}"
+        bulk_key = f"ai_bulk_configs_{full_table_name}"
 
         # Slider for dynamic column width adjustment
         col_ratio = st.slider(
             "Adjust left/right column width",
-            min_value=0.1,
-            max_value=0.9,
-            value=0.33,
-            step=0.01,
-            help="Adjust the proportion of left column (Table Columns) vs right column (AI Rule Generation)"
+            min_value=0.1, max_value=0.9, value=0.33, step=0.01,
+            help="Adjust the proportion of Table Columns vs AI Rule Generation"
         )
         left_col, right_col = st.columns([col_ratio, 1 - col_ratio])
 
@@ -191,57 +192,83 @@ class DqxUIComponents:
             st.dataframe(columns_df, use_container_width=True)
 
         with right_col:
-            # AI-detected primary key grid view
             st.subheader("AI Detected Primary Keys")
             try:
-                primary_key_checks = self.dqx.ai_detect_primary_key(
-                    input_table_name=f"{cat}.{schema}.{table}"
-                )
+                primary_key_checks = self.dqx.ai_detect_primary_key(input_table_name=full_table_name)
                 pk_display = [pk.__dict__ if hasattr(pk, '__dict__') else pk for pk in primary_key_checks]
                 st.dataframe(pd.DataFrame(pk_display), use_container_width=True)
             except Exception as e:
                 st.error(f"Error detecting primary keys: {str(e)}")
 
-            # User input for natural language requirements
+            # User input
             user_prompt = st.text_area(
                 "Requirement Prompt",
-                placeholder="Email addresses must be valid.\nPhone numbers should follow standard format.",
+                placeholder="Email addresses must be valid.",
                 height=150,
                 key="ai_prompt_input"
             )
+            gen_pressed = st.button("Generate AI Rules", type="primary", key=f"gen_ai_rules_{full_table_name}")
 
-            if st.button("Generate AI Rules", type="primary"):
+            # --- PHASE 1: GENERATION
+            if gen_pressed:
                 if not user_prompt.strip():
                     st.warning("Please enter some requirements first.")
-                    return
+                else:
+                    # # Clear cache if pressed again
+                    # st.session_state.pop(rules_key, None)
+                    # st.session_state.pop(bulk_key, None)
+                    with st.spinner("AI is analyzing table context and generating rules..."):
+                        try:
+                            ai_rules = self.dqx.ai_assisted_rule_generation(
+                                user_prompt=user_prompt,
+                                input_table_name=full_table_name
+                            )
+                            # Save to session state so they persist across reruns
+                            st.session_state[rules_key] = ai_rules
+                            st.session_state[bulk_key] = self.create_bulk_configs(
+                                ai_rules,
+                                self.db.fetch_rule_definitions(self.config_catalog, self.config_schema)
+                            )
+                            st.success("Rules generated successfully!")
+                        except Exception as e:
+                            st.error(f"Error generating AI rules: {str(e)}")
+                            if "ENDPOINT_NOT_FOUND" in str(e):
+                                st.info("Check if your LLM Model name in dqx_handler is correct.")
 
-                with st.spinner("AI is analyzing table context and generating rules..."):
-                    try:
-                        # Call the AI generation method
-                        ai_rules = self.dqx.ai_assisted_rule_generation(
-                            user_prompt=user_prompt,
-                            input_table_name=f"{cat}.{schema}.{table}"
-                        )
+            # --- PHASE 2: PERSISTENT UI (Triggered if rules exist in session state) ---
+            if rules_key in st.session_state:
+                st.divider()
+                st.subheader("Generated AI Rules")
+                
+                current_rules = st.session_state[rules_key]
+                rules_display = [r.__dict__ if hasattr(r, '__dict__') else r for r in current_rules]
+                st.dataframe(pd.DataFrame(rules_display), use_container_width=True)
 
-                        # Display Results
-                        st.success("Rules generated successfully!")
-                        st.subheader("Generated AI Rules")
-                        
-                        # Convert rule objects to dicts for dataframe display
-                        rules_display = [r.__dict__ if hasattr(r, '__dict__') else r for r in ai_rules]
-                        st.dataframe(pd.DataFrame(rules_display), use_container_width=True)
+                # Download Option
+                ai_rules_json = json.dumps(current_rules, indent=2, default=self.dqx.json_serial)
+                st.download_button(
+                    label="Download AI Rules (JSON)",
+                    data=ai_rules_json,
+                    file_name=f"ai_rules_{table}.json",
+                    mime="application/json",
+                    key=f"dl_{full_table_name}"
+                )
 
-                        # Download option for the AI rules
-                        ai_rules_json = json.dumps(ai_rules, indent=2, default=self.json_serial)
-                        st.download_button(
-                            label="Download AI Rules (JSON)",
-                            data=ai_rules_json,
-                            file_name=f"ai_rules_{table}.json",
-                            mime="application/json",
-                            key="ai_rules_download"
-                        )
-
-                    except Exception as e:
-                        st.error(f"Error generating AI rules: {str(e)}")
-                        if "ENDPOINT_NOT_FOUND" in str(e):
-                            st.info("Check if your LLM Model name in dqx_handler is correct (e.g., 'databricks-claude-3-5-sonnet').")
+                # --- PHASE 3: SAVE TO DB ---
+                if st.button("💾 Save AI Generated Checks", use_container_width=True, type="primary", key=f"save_btn_{full_table_name}"):
+                    bulk_configs = st.session_state.get(bulk_key, [])
+                    with st.spinner("⏳ Inserting AI-generated rules into database..."):
+                        try:
+                            self.db.reg_multiple_dq_rule(
+                                src_catalog=cat,
+                                config_catalog=self.config_catalog,
+                                config_schema=self.config_schema,
+                                src_schema=schema,
+                                table=table,
+                                rules_data=bulk_configs
+                            )
+                            st.success(f"✅ Success! {len(bulk_configs)} AI-generated rules saved to database.")
+                            # Optional: Clear the state if you want the UI to reset after saving
+                            del st.session_state[rules_key]
+                        except Exception as e:
+                            st.error(f"❌ Error saving AI-generated rules: {str(e)}")
