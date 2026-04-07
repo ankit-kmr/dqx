@@ -166,8 +166,7 @@ class DqxUIComponents:
                     except Exception as e:
                         st.error(f"❌ Error saving bulk profile checks: {str(e)}")
 
-
-        
+  
     def render_ai_check_generator(self, cat, schema, table):
         st.subheader("AI-Assisted Rule Generation")
         st.info("Describe your data quality requirements in natural language (e.g., 'Ensure emails follow a valid regex').")
@@ -195,8 +194,11 @@ class DqxUIComponents:
             st.subheader("AI Detected Primary Keys")
             try:
                 primary_key_checks = self.dqx.ai_detect_primary_key(input_table_name=full_table_name)
-                pk_display = [pk.__dict__ if hasattr(pk, '__dict__') else pk for pk in primary_key_checks]
-                st.dataframe(pd.DataFrame(pk_display), use_container_width=True)
+                if isinstance(primary_key_checks, dict) and 'all_attempts' in primary_key_checks:
+                    attempts_data = primary_key_checks['all_attempts']
+                    st.dataframe(pd.DataFrame(attempts_data), use_container_width=True)
+                else:
+                    st.error("No attempts found in the result.")
             except Exception as e:
                 st.error(f"Error detecting primary keys: {str(e)}")
 

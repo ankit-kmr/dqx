@@ -1,13 +1,14 @@
 from databricks.connect import DatabricksSession
 from databricks.sdk import WorkspaceClient
 from databricks.labs.dqx.profiler.profiler import DQProfiler
-from databricks.labs.dqx.config import LLMModelConfig,InputConfig,LLMConfig
+from databricks.labs.dqx.config import LLMModelConfig,InputConfig
 from databricks.labs.dqx.profiler.generator import DQGenerator
 import streamlit as st
 import os
 import json
 from datetime import date, datetime
 import time
+import pandas as pd
 
 
 class dqx_handler:
@@ -111,6 +112,17 @@ if __name__ == "__main__":
     checks = handler.generate_profile_checks(res_profiles,tbl)
     print(res_summary_stats,'\n',res_profiles)
     print(checks)
-    # print(handler.ai_assisted_rule_generation(inp,tbl))
-    print(handler.ai_detect_primary_key(tbl))
+    primary_key_checks = handler.ai_detect_primary_key(tbl)
+    print(primary_key_checks)
+    print(type(primary_key_checks))
+    if isinstance(primary_key_checks, dict) and 'all_attempts' in primary_key_checks:
+        attempts_data = primary_key_checks['all_attempts']
+        print("all_attempts ==> ", attempts_data)
+        print(pd.DataFrame(attempts_data))
+    else:
+        print("No attempts found in the result.")
+    
+    print(handler.ai_assisted_rule_generation(inp,tbl))
+    print("------------------------------------------\n")
+    
 
