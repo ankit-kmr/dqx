@@ -17,8 +17,7 @@ class dqx_handler:
             DatabricksSession.builder.getOrCreate().stop()
         except:
             pass
-        self.spark = DatabricksSession.builder.serverless().getOrCreate()
-        # self._spark = None
+        self._spark = DatabricksSession.builder.serverless().getOrCreate()
         self.ws = WorkspaceClient()
         self.llm_cfg = LLMModelConfig("databricks/databricks-meta-llama-3-3-70b-instruct")
         self.profiler = DQProfiler(workspace_client=self.ws, llm_model_config=self.llm_cfg)
@@ -27,26 +26,18 @@ class dqx_handler:
         os.makedirs(self.profile_data_path, exist_ok=True)
 
 
-    # @property
-    # def spark(self):
-    #     """Returns the active Spark session, creating a new one if it's dead."""
-    #     try:
-    #         # Check if session is alive (simple dummy call)
-    #         if self._spark:
-    #             self._spark.sql("SELECT 1").collect()
-    #     except Exception:
-    #         self._spark = None
+    @property
+    def spark(self):
+        """Returns the active Spark session, creating a new one if it's dead."""
+        try:
+            if self._spark:
+                self._spark.sql("SELECT 1").collect()
+        except Exception:
+            self._spark = None
 
-    #     if self._spark is None:
-    #         # Create a new serverless session
-    #         self._spark = DatabricksSession.builder.serverless().getOrCreate()
-    #     return self._spark
-
-    #     try:
-    #         self._spark.sql("SELECT 1")
-    #     except Exception:
-    #         self._spark = DatabricksSession.builder.remote().getOrCreate()
-    #     return self._spark
+        if self._spark is None:
+            self._spark = DatabricksSession.builder.serverless().getOrCreate()
+        return self._spark
     
 
     @staticmethod
@@ -141,10 +132,10 @@ if __name__ == "__main__":
     checks = handler.generate_profile_checks(res_profiles,tbl)
     print(res_summary_stats,'\n',res_profiles)
     print(checks)
-    primary_key_checks = handler.ai_detect_primary_key(tbl)
-    print(primary_key_checks)
-    print(type(primary_key_checks))
-    print(handler.ai_assisted_rule_generation(inp,tbl))
-    print("------------------------------------------\n")
+    # primary_key_checks = handler.ai_detect_primary_key(tbl)
+    # print(primary_key_checks)
+    # print(type(primary_key_checks))
+    # print(handler.ai_assisted_rule_generation(inp,tbl))
+    # print("------------------------------------------\n")
     
 
