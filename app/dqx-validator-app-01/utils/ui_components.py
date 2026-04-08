@@ -217,7 +217,7 @@ class UIComponents:
                 error_logs = []
                 progress_bar = st.progress(0)
                 # Using the empty string spinner as you requested
-                with st.spinner(""):
+                with st.spinner("Registring rules..."):
                     total_rules = len(bulk_configs)
                     for entry in bulk_configs:
                         try:
@@ -225,7 +225,7 @@ class UIComponents:
                             a_dict = json.loads(entry['args']) if entry['args'].strip() else {}
                             
                             success, msg = self.db.register_dq_rule(
-                                cat, self.config_schema, schema, table, 
+                                self.config_catalog, cat, self.config_schema, schema, table, 
                                 entry['col'], entry['rid'], entry['crit'], a_dict
                             )
                             

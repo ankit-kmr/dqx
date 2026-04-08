@@ -20,7 +20,6 @@ class dqx_handler:
         self.spark = DatabricksSession.builder.serverless().getOrCreate()
         self.ws = WorkspaceClient()
         self.llm_cfg = LLMModelConfig("databricks/databricks-meta-llama-3-3-70b-instruct")
-        # self.llm_cfg = LLMConfig("databricks/databricks-meta-llama-3-1-8b-instruct")
         self.profiler = DQProfiler(workspace_client=self.ws, llm_model_config=self.llm_cfg)
         self.generator = DQGenerator(self.ws, llm_model_config=self.llm_cfg)
         self.profile_data_path = os.path.join(os.getcwd(), "profile_data")
@@ -56,7 +55,7 @@ class dqx_handler:
         return file_path
 
 
-    @st.cache_data(ttl=1200, show_spinner='Loading profile...')
+    @st.cache_data(ttl=1200, show_spinner=False)
     def load_profile_data(_self, input_table_name, columns_list=None):
         table_dir = os.path.join(_self.profile_data_path, input_table_name.replace('.', '_'))
         file_path = os.path.join(table_dir, "profile.json")
@@ -75,7 +74,7 @@ class dqx_handler:
         return summary_stats, profiles
 
 
-    @st.cache_data(ttl=1200, show_spinner='Generating checks...')
+    @st.cache_data(ttl=1200, show_spinner='Generating rules...')
     def generate_profile_checks(_self, profiles, input_table_name):
         # Convert dict profiles to objects with attribute access if needed
         from types import SimpleNamespace
@@ -83,14 +82,14 @@ class dqx_handler:
         return _self.generator.generate_dq_rules(profile_objs)
     
     
-    @st.cache_data(ttl=1200, show_spinner='Loading...')
+    @st.cache_data(ttl=1200, show_spinner=False)
     def ai_assisted_rule_generation(_self, user_prompt, input_table_name):
         return _self.generator.generate_dq_rules_ai_assisted(
             user_input=user_prompt,
             input_config=InputConfig(location=input_table_name)
         )
 
-    @st.cache_data(ttl=1200, show_spinner='Loading...')
+    @st.cache_data(ttl=1200, show_spinner=False)
     def ai_detect_primary_key(_self, input_table_name):
         return _self.profiler.detect_primary_keys_with_llm(
             input_config=InputConfig(location=input_table_name)
@@ -115,8 +114,7 @@ if __name__ == "__main__":
     primary_key_checks = handler.ai_detect_primary_key(tbl)
     print(primary_key_checks)
     print(type(primary_key_checks))
-    if isinstance(primary_key_checks, dict) and 'all_attempts' in primary_key_checks:
-        attempts_data = primary_key_checks['all_attempts']
+    if isinstance(primary_key_checks, dict) and 'all_attempts' in primary_key
         print("all_attempts ==> ", attempts_data)
         print(pd.DataFrame(attempts_data))
     else:

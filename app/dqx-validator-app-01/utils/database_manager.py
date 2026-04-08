@@ -100,8 +100,8 @@ class DatabaseManager:
         return data
     
     
-    def register_dq_rule(self, catalog, config_schema, src_schema, table, col, rule_id, criticality, args_dict):
-        source_full_path = f"{catalog}.{src_schema}.{table}"
+    def register_dq_rule(self, src_catalog, config_catalog, config_schema, src_schema, table, col, rule_id, criticality, args_dict):
+        source_full_path = f"{src_catalog}.{src_schema}.{table}"
         
         # Replace <value> placeholders in the arguments dictionary
         if args_dict:
@@ -120,7 +120,7 @@ class DatabaseManager:
             map_sql = "CAST(NULL AS MAP<STRING, STRING>)"
         
         merge_query = f"""
-        MERGE INTO {catalog}.{config_schema}.dqx_rule_mappings AS target
+        MERGE INTO {config_catalog}.{config_schema}.dqx_rule_mappings AS target
         USING (SELECT '{source_full_path}' as table_name, '{rule_id}' as rule_id, '{col}' as column_name, '{criticality}' as criticality, true as is_active, {map_sql} as arguments, current_timestamp() as updated_at) AS source
         ON target.table_name = source.table_name AND target.rule_id = source.rule_id AND target.column_name = source.column_name
         WHEN MATCHED THEN UPDATE SET criticality = source.criticality, is_active = source.is_active, arguments = source.arguments, updated_at = source.updated_at

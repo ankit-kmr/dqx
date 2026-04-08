@@ -36,7 +36,7 @@ class DqxUIComponents:
         return bulk_configs
 
 
-    def render_profile_generator(self, cat, schema, table):
+    def render_profile_rule_generator(self, cat, schema, table):
         full_table_name = f"{cat}.{schema}.{table}"
         columns_df = self.db.fetch_columns(cat, schema, table)
         all_columns = columns_df['col_name'].tolist()
@@ -127,7 +127,7 @@ class DqxUIComponents:
             st.divider()
 
             # Display Profile Checks
-            st.subheader("✅ Profile Checks")
+            st.subheader("✅ Profile Inferred Rules")
             st.dataframe(pd.DataFrame(profile_checks), use_container_width=True)
             
             btn_col3, btn_col4, _ = st.columns([1, 1, 0.1])
@@ -149,7 +149,7 @@ class DqxUIComponents:
             st.divider()
 
             # 6. Bulk Save Logic (Moved outside the nested IF)
-            if st.button("💾 Save Checks ", use_container_width=True, type="primary"):
+            if st.button("💾 Save Rules ", use_container_width=True, type="primary"):
                 bulk_configs = st.session_state.get(f"bulk_configs_{full_table_name}", [])
                 
                 with st.spinner("⏳ Inserting records into database..."):
@@ -167,7 +167,7 @@ class DqxUIComponents:
                         st.error(f"❌ Error saving bulk profile checks: {str(e)}")
 
   
-    def render_ai_check_generator(self, cat, schema, table):
+    def render_ai_rule_generator(self, cat, schema, table):
         st.subheader("AI-Assisted Rule Generation")
         st.info("Describe your data quality requirements in natural language (e.g., 'Ensure emails follow a valid regex').")
 
@@ -192,15 +192,27 @@ class DqxUIComponents:
 
         with right_col:
             st.subheader("AI Detected Primary Keys")
-            try:
-                primary_key_checks = self.dqx.ai_detect_primary_key(input_table_name=full_table_name)
+            detect_col, _ = st.columns([1, 3])
+            with detect_col:
+                detect_pk_pressed = st.button("Detect Primary Key", key=f"detect_pk_{full_table_name}", type="primary")
+            
+            primary_key_checks = None
+            if detect_pk_pressed:
+                with st.spinner("Detecting primary key..."):
+                    try:
+                        primary_key_checks = self.dqx.ai_detect_primary_key(full_table_name)
+                        st.session_state[f"pk_attempts_{full_table_name}"] = primary_key_checks
+                    except Exception as e:
+                        st.error(f"Error detecting primary keys: {str(e)}")
+            else:
+                primary_key_checks = st.session_state.get(f"pk_attempts_{full_table_name}", None)
+            
+            if primary_key_checks is not None:
                 if isinstance(primary_key_checks, dict) and 'all_attempts' in primary_key_checks:
                     attempts_data = primary_key_checks['all_attempts']
                     st.dataframe(pd.DataFrame(attempts_data), use_container_width=True)
                 else:
-                    st.error("No attempts found in the result.")
-            except Exception as e:
-                st.error(f"Error detecting primary keys: {str(e)}")
+                    st.error("No result found.")
 
             # User input
             user_prompt = st.text_area(
@@ -216,9 +228,6 @@ class DqxUIComponents:
                 if not user_prompt.strip():
                     st.warning("Please enter some requirements first.")
                 else:
-                    # # Clear cache if pressed again
-                    # st.session_state.pop(rules_key, None)
-                    # st.session_state.pop(bulk_key, None)
                     with st.spinner("AI is analyzing table context and generating rules..."):
                         try:
                             ai_rules = self.dqx.ai_assisted_rule_generation(
@@ -247,13 +256,19 @@ class DqxUIComponents:
                 st.dataframe(pd.DataFrame(rules_display), use_container_width=True)
 
                 # Download Option
-                ai_rules_json = json.dumps(current_rules, indent=2, default=self.dqx.json_serial)
                 st.download_button(
                     label="Download AI Rules (JSON)",
-                    data=ai_rules_json,
+                    data=json.dumps(current_rules, indent=2, default=self.dqx.json_serial),
                     file_name=f"ai_rules_{table}.json",
                     mime="application/json",
                     key=f"dl_{full_table_name}"
+                )
+                st.download_button(
+                    label="Download AI Rules (YAML)",
+                    data=yaml.dump(current_rules, default_flow_style=False),
+                    file_name=f"ai_rules_{table}.yaml",
+                    mime="text/yaml",
+                    key=f"dl_yaml_{full_table_name}"
                 )
 
                 # --- PHASE 3: SAVE TO DB ---
