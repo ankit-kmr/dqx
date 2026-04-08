@@ -18,6 +18,7 @@ class dqx_handler:
         except:
             pass
         self.spark = DatabricksSession.builder.serverless().getOrCreate()
+        # self._spark = None
         self.ws = WorkspaceClient()
         self.llm_cfg = LLMModelConfig("databricks/databricks-meta-llama-3-3-70b-instruct")
         self.profiler = DQProfiler(workspace_client=self.ws, llm_model_config=self.llm_cfg)
@@ -25,7 +26,29 @@ class dqx_handler:
         self.profile_data_path = os.path.join(os.getcwd(), "profile_data")
         os.makedirs(self.profile_data_path, exist_ok=True)
 
+
+    # @property
+    # def spark(self):
+    #     """Returns the active Spark session, creating a new one if it's dead."""
+    #     try:
+    #         # Check if session is alive (simple dummy call)
+    #         if self._spark:
+    #             self._spark.sql("SELECT 1").collect()
+    #     except Exception:
+    #         self._spark = None
+
+    #     if self._spark is None:
+    #         # Create a new serverless session
+    #         self._spark = DatabricksSession.builder.serverless().getOrCreate()
+    #     return self._spark
+
+    #     try:
+    #         self._spark.sql("SELECT 1")
+    #     except Exception:
+    #         self._spark = DatabricksSession.builder.remote().getOrCreate()
+    #     return self._spark
     
+
     @staticmethod
     def json_serial(obj):
         """Static method to handle date/datetime serialization in JSON."""
@@ -42,8 +65,15 @@ class dqx_handler:
         run_date = datetime.now().strftime("%Y%m%d")
         if columns_list is None or not columns_list:
             raise ValueError("columns_list must be provided and non-empty.")
-        summary_stats, profiles = self.profiler.profile_table(
-            input_config=InputConfig(location=input_table_name),
+        
+        # summary_stats, profiles = self.profiler.profile_table(
+        #     input_config=InputConfig(location=input_table_name),
+        #     columns=columns_list
+        # )
+
+        df = self.spark.read.table(input_table_name)
+        summary_stats, profiles = self.profiler.profile(
+            df=df,
             columns=columns_list
         )
 

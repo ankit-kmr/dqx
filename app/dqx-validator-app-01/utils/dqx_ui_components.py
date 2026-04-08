@@ -16,11 +16,13 @@ class DqxUIComponents:
         bulk_configs = []
         for check in profile_checks:
             if isinstance(check, dict) and "check" in check:
-                col_name = check["check"]["arguments"].get("column")
-                rule_func = check["check"]['function']
+                check_obj = check["check"]
+                rule_func = check_obj.get('function')
                 crit = check.get("criticality")
-                args = check["check"]["arguments"]
+                args = check_obj.get("arguments", {})
                 rid = None
+                col_name = args.get("column") or args.get("columns")
+
                 if rule_definitions_df is not None and rule_func:
                     rule_row = rule_definitions_df.loc[
                         rule_definitions_df['rule_function'].str.lower() == rule_func.lower()
@@ -31,7 +33,9 @@ class DqxUIComponents:
                     "col": col_name,
                     "rid": rid,
                     "crit": crit,
-                    "args": args
+                    "args": args,
+                    "name": check.get("name"),
+                    "user_metadata": check.get("user_metadata")
                 })
         return bulk_configs
 

@@ -140,7 +140,7 @@ class DatabaseManager:
         source_full_path = f"{src_catalog}.{src_schema}.{table}"
         values_sql = []
         for rule in rules_data:
-            col = rule.get('col')
+            col = rule.get('col')[0] if isinstance(rule.get('col'), list) and rule.get('col') else rule.get('col') if isinstance(rule.get('col'), str) else "" 
             rule_id = rule.get('rid')
             criticality = rule.get('crit')
             args_dict = rule.get('args')
@@ -148,7 +148,7 @@ class DatabaseManager:
                 args_dict = self._replace_placeholders(args_dict, col)
                 kv_pairs = []
                 for k, v in args_dict.items():
-                    val_str = json.dumps(v) if isinstance(v, (list, dict)) else str(v)
+                    val_str = json.dumps(v) if isinstance(v, (list, dict)) else str(v) if v is not None else ""
                     val_escaped = val_str.replace("'", "''")
                     kv_pairs.append(f"'{k}', '{val_escaped}'")
                 map_sql = f"map({', '.join(kv_pairs)})"
