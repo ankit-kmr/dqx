@@ -114,12 +114,6 @@ if __name__ == "__main__":
     primary_key_checks = handler.ai_detect_primary_key(tbl)
     print(primary_key_checks)
     print(type(primary_key_checks))
-    if isinstance(primary_key_checks, dict) and 'all_attempts' in primary_key
-        print("all_attempts ==> ", attempts_data)
-        print(pd.DataFrame(attempts_data))
-    else:
-        print("No attempts found in the result.")
-    
     print(handler.ai_assisted_rule_generation(inp,tbl))
     print("------------------------------------------\n")
     
