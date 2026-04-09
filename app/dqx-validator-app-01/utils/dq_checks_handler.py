@@ -28,15 +28,14 @@ class dqx_handler:
 
     @property
     def spark(self):
-        """Returns the active Spark session, creating a new one if it's dead."""
         try:
-            if self._spark:
+            if hasattr(self, '_spark') and self._spark:
                 self._spark.sql("SELECT 1").collect()
+                return self._spark
         except Exception:
-            self._spark = None
-
-        if self._spark is None:
-            self._spark = DatabricksSession.builder.serverless().getOrCreate()
+            pass 
+        
+        self._spark = DatabricksSession.builder.serverless().getOrCreate()
         return self._spark
     
 
@@ -56,11 +55,6 @@ class dqx_handler:
         run_date = datetime.now().strftime("%Y%m%d")
         if columns_list is None or not columns_list:
             raise ValueError("columns_list must be provided and non-empty.")
-        
-        # summary_stats, profiles = self.profiler.profile_table(
-        #     input_config=InputConfig(location=input_table_name),
-        #     columns=columns_list
-        # )
 
         df = self.spark.read.table(input_table_name)
         summary_stats, profiles = self.profiler.profile(

@@ -1,14 +1,15 @@
 import requests
+import time
 
 class WorkflowManager:
     def __init__(self, hostname, token, job_id):
         self.hostname = hostname
         self.token = token
         self.job_id = job_id
+        self.headers = {"Authorization": f"Bearer {self.token}"}
 
     def trigger_workflow(self, config_catalog, source_catalog, config, src, table):
         api_url = f"https://{self.hostname}/api/2.1/jobs/run-now"
-        headers = {"Authorization": f"Bearer {self.token}"}
         payload = {
             "job_id": self.job_id,
             "job_parameters": {
@@ -19,4 +20,27 @@ class WorkflowManager:
                 "table_name": table
             }
         }
-        return requests.post(api_url, headers=headers, json=payload)
+        response = requests.post(api_url, headers=self.headers, json=payload)
+        response.raise_for_status()
+        return response
+
+    def get_run_status(self, run_id):
+        """Returns 'RUNNING', 'SUCCESS', or 'FAILED'"""
+        api_url = f"https://{self.hostname}/api/2.1/jobs/runs/get?run_id={run_id}"
+        response = requests.get(api_url, headers=self.headers)
+        response.raise_for_status()
+        # state = run_data.get("state", {})
+        # life_cycle = state.get("life_cycle_state") # e.g., PENDING, RUNNING, TERMINATED
+        # result = state.get("result_state")         # e.g., SUCCESS, FAILED, CANCELLED
+
+        # if life_cycle in ["PENDING", "RUNNING", "BLOCKED"]:
+        #     return "RUNNING"
+        
+        # return "SUCCESS" if result == "SUCCESS" else "FAILED"
+        return response
+
+
+if __name__ == "__main__":
+    manager = WorkflowManager("host", "token", "123")
+    run_id = manager.trigger_workflow(...)
+    status = manager.get_run_status(run_id)

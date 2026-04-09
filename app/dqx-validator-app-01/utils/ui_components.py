@@ -99,12 +99,20 @@ class UIComponents:
                      disabled=not has_rules, 
                      help="No rules found to execute" if not has_rules else "Trigger Databricks Workflow"):
             
-            with st.spinner("Triggering Workflow..."):
+            with st.spinner("Triggered Workflow..."):
                 resp = self.wm.trigger_workflow(self.config_catalog, cat, self.config_schema, schema, table)
                 if resp.status_code == 200:
-                    st.success(f"✅ Triggered! Run ID: {resp.json().get('run_id')}")
+                    run_id = resp.json().get('run_id')
+                    run_resp = self.wm.get_run_status(run_id)
+                    run_page_url = run_resp.json().get('run_page_url')
+                    if run_page_url:
+                        st.success(f"✅ Triggered! Run ID: {run_id}\nRun Page URL: {run_page_url}")
+                    else:
+                        st.error(f"Run page URL not found for Run ID: {run_id}")
                 else:
-                    st.error(resp.text)
+                    st.error(f"Failed to trigger workflow: {resp.text}")
+
+
 
     def render_add_rules_mapping(self, cat, schema, table):
         st.subheader("✅ Configure New Rules Mapping")
@@ -266,13 +274,18 @@ class UIComponents:
                 st.divider()
                 st.subheader("🚀 Execution")
                 if st.button("Run DQX Checks", type="primary", key="run_checks_final"):
-                    with st.spinner("Connecting to Databricks..."):
-                        response = self.wm.trigger_workflow(self.config_catalog, cat, self.config_schema, schema, table)
-                        if response.status_code == 200:
-                            run_id = response.json().get('run_id')
-                            st.success(f"✅ Workflow Triggered Successfully! Run ID: `{run_id}`")
+                    with st.spinner("Triggered Workflow..."):
+                        resp = self.wm.trigger_workflow(self.config_catalog, cat, self.config_schema, schema, table)
+                        if resp.status_code == 200:
+                            run_id = resp.json().get('run_id')
+                            run_resp = self.wm.get_run_status(run_id)
+                            run_page_url = run_resp.json().get('run_page_url')
+                            if run_page_url:
+                                st.success(f"✅ Triggered! Run ID: {run_id}\nRun Page URL: {run_page_url}")
+                            else:
+                                st.error(f"Run page URL not found for Run ID: {run_id}")
                         else:
-                            st.error(f"Workflow Trigger Failed: {response.text}")
+                            st.error(f"Failed to trigger workflow: {resp.text}")
             else:
                 st.warning("No mappings found. Please ensure the registration was successful.")
 
