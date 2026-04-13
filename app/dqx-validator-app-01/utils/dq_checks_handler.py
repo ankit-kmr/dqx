@@ -34,7 +34,6 @@ class dqx_handler:
                 return self._spark
         except Exception:
             pass 
-        
         self._spark = DatabricksSession.builder.serverless().getOrCreate()
         return self._spark
     

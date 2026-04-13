@@ -3,6 +3,7 @@ import json
 import pandas as pd
 from datetime import date, datetime
 import yaml
+import time
 
 
 class DqxUIComponents:
@@ -13,11 +14,10 @@ class DqxUIComponents:
         self.config_schema = config_schema
         
 
-    def create_bulk_configs(self, profile_checks):
+    def create_bulk_configs(self, profile_checks , rule_definitions_df=None):
         bulk_configs = []
         # 2. Clear Streamlit cache before fetching fresh data
-        self.db.fetch_rule_definitions.clear()
-        rule_definitions_df = self.db.fetch_rule_definitions(self.config_catalog, self.config_schema)
+        # time.sleep(10)
         
         for check in profile_checks:
             if isinstance(check, dict) and "check" in check:
@@ -108,12 +108,14 @@ class DqxUIComponents:
 
                 # 1. Insert new rules
                 self.db.insert_rules(self.config_catalog, self.config_schema, profile_checks)
-                
+                self.db.fetch_rule_definitions.clear(self.db, self.config_catalog, self.config_schema)
+                fresh_rules_df = self.db.fetch_rule_definitions(self.config_catalog, self.config_schema)
+
                 # --- SAVE TO SESSION STATE TO PERSIST AFTER CLICKING OTHER BUTTONS ---
                 st.session_state[f"active_profile_checks_{full_table_name}"] = profile_checks
                 st.session_state[f"active_summary_stats_{full_table_name}"] = res_summary_stats
                 st.session_state[f"bulk_configs_{full_table_name}"] = self.create_bulk_configs(
-                    profile_checks
+                    profile_checks , fresh_rules_df
                 )
 
         # 5. Display Logic (Triggered if data exists in Session State)
@@ -248,11 +250,14 @@ class DqxUIComponents:
 
                             # 1. Insert new rules
                             self.db.insert_rules(self.config_catalog, self.config_schema, ai_rules)
-
+                            self.db.fetch_rule_definitions.clear(self.db, self.config_catalog, self.config_schema)
+                            # 3. Fetch fresh definitions for mapping
+                            fresh_rules_df = self.db.fetch_rule_definitions(self.config_catalog, self.config_schema)
+                            
                             # Save to session state so they persist across reruns
                             st.session_state[rules_key] = ai_rules
                             st.session_state[bulk_key] = self.create_bulk_configs(
-                                ai_rules
+                                ai_rules , fresh_rules_df
                             )
                             st.success("Rules generated successfully!")
                         except Exception as e:

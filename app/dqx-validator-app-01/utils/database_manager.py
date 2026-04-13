@@ -57,14 +57,14 @@ class DatabaseManager:
             return df
 
     @st.cache_data(ttl=30, show_spinner=False)
-    def fetch_dqx_mappings(_self, catalog, config_schema, src_catalog, src_schema, table):
+    def fetch_dqx_mappings(_self, config_catalog, config_schema, src_catalog, src_schema, table):
         query = f"""
         WITH ranked_rules AS (
             SELECT m.column_name AS column, r.rule_dimension, r.rule_name, r.description as rule_description,
                    m.criticality, m.arguments, m.is_active, m.rule_id,
                    ROW_NUMBER() OVER (PARTITION BY m.table_name, m.column_name, r.rule_function ORDER BY m.updated_at DESC) as row_num
-            FROM {catalog}.{config_schema}.dqx_rule_mappings m
-            JOIN {catalog}.{config_schema}.dqx_rule_definitions r ON m.rule_id = r.rule_id
+            FROM {config_catalog}.{config_schema}.dqx_rule_mappings m
+            JOIN {config_catalog}.{config_schema}.dqx_rule_definitions r ON m.rule_id = r.rule_id
             WHERE m.table_name = '{src_catalog}.{src_schema}.{table}' AND m.is_active = true
         ) SELECT * FROM ranked_rules WHERE row_num = 1
         """
@@ -73,17 +73,19 @@ class DatabaseManager:
             data = cursor.fetchall()
             return pd.DataFrame(data, columns=[d[0] for d in cursor.description]) if data else pd.DataFrame()
 
-    @st.cache_data(ttl=900, show_spinner=False)
-    def fetch_rule_definitions(_self, catalog, config_schema):
-        query = f"SELECT rule_id, rule_function, rule_name, rule_dimension, argument_placeholder, is_arg_mendatory, CONCAT(rule_id, ' - ', rule_name) AS rule_info FROM {catalog}.{config_schema}.dqx_rule_definitions"
+    
+    @st.cache_data(ttl=30, show_spinner=False)
+    def fetch_rule_definitions(_self, _config_catalog, _config_schema):
+        query = f"SELECT rule_id, rule_function, rule_name, rule_dimension, argument_placeholder, is_arg_mendatory, CONCAT(rule_id, ' - ', rule_name) AS rule_info FROM {_config_catalog}.{_config_schema}.dqx_rule_definitions"
         with _self.get_connection().cursor() as cursor:
             cursor.execute(query)
             data = cursor.fetchall()
             return pd.DataFrame(data, columns=[d[0] for d in cursor.description]) if data else pd.DataFrame()
+        
 
     @st.cache_data(ttl=1200, show_spinner=False)
-    def fetch_rule_dimensions(_self, catalog, config_schema):
-        query = f"SELECT DISTINCT rule_dimension FROM {catalog}.{config_schema}.dqx_rule_definitions WHERE rule_dimension IS NOT NULL"
+    def fetch_rule_dimensions(_self, config_catalog, config_schema):
+        query = f"SELECT DISTINCT rule_dimension FROM {config_catalog}.{config_schema}.dqx_rule_definitions WHERE rule_dimension IS NOT NULL"
         with _self.get_connection().cursor() as cursor:
             cursor.execute(query)
             return [row[0] for row in cursor.fetchall()]
@@ -172,17 +174,17 @@ class DatabaseManager:
 
         
     
-    def deactivate_dq_rule(self, catalog, config_schema, full_table_path, col, rule_id):
-        query = f"UPDATE {catalog}.{config_schema}.dqx_rule_mappings SET is_active = false, updated_at = current_timestamp() WHERE table_name = '{full_table_path}' AND column_name = '{col}' AND rule_id = '{rule_id}'"
+    def deactivate_dq_rule(self, config_catalog, config_schema, full_table_path, col, rule_id):
+        query = f"UPDATE {config_catalog}.{config_schema}.dqx_rule_mappings SET is_active = false, updated_at = current_timestamp() WHERE table_name = '{full_table_path}' AND column_name = '{col}' AND rule_id = '{rule_id}'"
         try:
             with self.get_connection().cursor() as cursor: cursor.execute(query)
             return True
         except: return False
 
 
-    def insert_rules(self, catalog, config_schema, checks_list):
+    def insert_rules(self, config_catalog, config_schema, checks_list):
         try:
-            df = self.fetch_rule_definitions(catalog, config_schema)
+            df = self.fetch_rule_definitions(config_catalog, config_schema)
             existing = set(df['rule_function']) if not df.empty else set()
             # Extract max ID safely
             last_id = int(df['rule_id'].str.extract(r'(\d+)').max().iloc[0]) if not df.empty else 0
@@ -204,7 +206,7 @@ class DatabaseManager:
 
             if new_rows:
                 vals = ", ".join([f"('{r[0]}','{r[1]}','{r[2]}','{r[3]}',current_timestamp(),'{r[4]}',false)" for r in new_rows])
-                query = f"INSERT INTO {catalog}.{config_schema}.dqx_rule_definitions (rule_id, rule_name, rule_function, rule_dimension, created_date, argument_placeholder, is_arg_mendatory) VALUES {vals}"
+                query = f"INSERT INTO {config_catalog}.{config_schema}.dqx_rule_definitions (rule_id, rule_name, rule_function, rule_dimension, created_date, argument_placeholder, is_arg_mendatory) VALUES {vals}"
                 with self.get_connection().cursor() as cur: cur.execute(query)
                 
             return len(new_rows)
