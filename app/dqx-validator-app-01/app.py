@@ -6,6 +6,7 @@ from utils.workflow_manager import WorkflowManager
 from utils.ui_components import UIComponents
 from utils.dq_checks_handler import dqx_handler
 from utils.dqx_ui_components import DqxUIComponents
+from databricks.connect import DatabricksSession
 
 # --- 1. Page Configuration ---
 st.set_page_config(layout="wide", page_title="DQX Validator Portal")
@@ -26,16 +27,21 @@ config_schema = config.get('DEFAULT', 'dqx_config_schema')
 
 
 # --- 3. Initialize Managers ---
-@st.cache_resource(show_spinner='Loading...')
-def init_managers():
-    return (DatabaseManager(HOST, PATH, TOKEN), 
-            WorkflowManager(HOST, TOKEN, JOB_ID), 
-            dqx_handler())
+@st.cache_resource(show_spinner='Initializing Core Services...')
+def init_base_managers():
+    return (
+        DatabaseManager(HOST, PATH, TOKEN), 
+        WorkflowManager(HOST, TOKEN, JOB_ID)
+    )
 
-db, wm, dqx_h = init_managers()
+def get_spark():
+    return DatabricksSession.builder.serverless().getOrCreate()
 
+db, wm = init_base_managers()
+dqx_h = dqx_handler(get_spark()) 
 ui = UIComponents(db, wm, config_catalog, config_schema)
 dqx_ui = DqxUIComponents(db, dqx_h, config_catalog, config_schema)
+
 StateManager.initialize()
 
 # --- 4. Main UI Sidebar Navigation ---

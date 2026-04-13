@@ -11,8 +11,8 @@ import pandas as pd
 
 
 class dqx_handler:
-    def __init__(self):
-        self.spark = spark
+    def __init__(self, spark_session):
+        self.spark = spark_session
         self.ws = WorkspaceClient()
         self.llm_cfg = LLMModelConfig("databricks/databricks-meta-llama-3-3-70b-instruct")
         self.profiler = DQProfiler(workspace_client=self.ws, llm_model_config=self.llm_cfg)
@@ -94,7 +94,7 @@ class dqx_handler:
 
 
 if __name__ == "__main__":
-    handler = dqx_handler()
+    handler = dqx_handler(spark)
     print(handler.ws.config.host)
     print(handler.ws.config.token)
     tbl = 'dqx_sandbox.dqx_bronze.customer'
