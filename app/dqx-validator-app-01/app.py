@@ -28,10 +28,9 @@ config_schema = config.get('DEFAULT', 'dqx_config_schema')
 # --- 3. Initialize Managers ---
 @st.cache_resource(show_spinner='Loading...')
 def init_managers():
-    db = DatabaseManager(HOST, PATH, TOKEN)
-    wm = WorkflowManager(HOST, TOKEN, JOB_ID)
-    dqx_h = dqx_handler()
-    return db, wm, dqx_h
+    return (DatabaseManager(HOST, PATH, TOKEN), 
+            WorkflowManager(HOST, TOKEN, JOB_ID), 
+            dqx_handler())
 
 db, wm, dqx_h = init_managers()
 
@@ -68,8 +67,8 @@ if cat_select != "-- Select --" and table_select != "-- Select --":
         "🧬 Columns Details", 
         "🛡️ Manage DQ Mapping & Run", 
         "🆕 ADD New DQ Mapping",
-        "🧪 Profiling & Check Generator",
-        "🤖 AI-Assisted Check Generation"
+        "🧪 Profiling Rule Generation",
+        "🤖 AI-Assisted Rule Generation"
     ]
     active_tab = st.radio("Navigation", options=tab_labels, horizontal=True, key="active_tab_nav")
     st.divider()
@@ -86,11 +85,11 @@ if cat_select != "-- Select --" and table_select != "-- Select --":
     elif active_tab == "🆕 ADD New DQ Mapping":
         ui.render_add_rules_mapping(cat_select, schema_select, table_select)
     
-    elif active_tab == "🧪 Profiling & Check Generator":
-        dqx_ui.render_profile_generator(cat_select, schema_select, table_select)
+    elif active_tab == "🧪 Profiling Rule Generation":
+        dqx_ui.render_profile_rule_generator(cat_select, schema_select, table_select)
     
-    elif active_tab == "🤖 AI-Assisted Check Generation":
-        dqx_ui.render_ai_check_generator(cat_select, schema_select, table_select)
+    elif active_tab == "🤖 AI-Assisted Rule Generation":
+        dqx_ui.render_ai_rule_generator(cat_select, schema_select, table_select)
 
 else:
     st.info("👈 Please select a Catalog, Schema, and Table from the sidebar to begin.")

@@ -180,6 +180,40 @@ class DatabaseManager:
         except: return False
 
 
+    def insert_rules(self, catalog, config_schema, checks_list):
+        try:
+            df = self.fetch_rule_definitions(catalog, config_schema)
+            existing = set(df['rule_function']) if not df.empty else set()
+            # Extract max ID safely
+            last_id = int(df['rule_id'].str.extract(r'(\d+)').max().iloc[0]) if not df.empty else 0
+            
+            new_rows, seen_funcs = [], set()
+            for c in [x.get("check") for x in checks_list if isinstance(x, dict) and "check" in x]:
+                func = c.get('function')
+                if not func or func in existing or func in seen_funcs: continue
+                
+                last_id += 1
+                # Handle placeholder logic
+                args = {k: ("<col_name>" if k == "column" else ["<col_name>"] if k == "columns" else v) 
+                        for k, v in c.get("arguments", {}).items()}
+                
+                # (id, name, func, dimension, placeholder_json)
+                new_rows.append((f"R{str(last_id).zfill(3)}", func.replace('_', ' ').title(), 
+                                func, "Completeness", str(args).replace("'", '"')))
+                seen_funcs.add(func)
+
+            if new_rows:
+                vals = ", ".join([f"('{r[0]}','{r[1]}','{r[2]}','{r[3]}',current_timestamp(),'{r[4]}',false)" for r in new_rows])
+                query = f"INSERT INTO {catalog}.{config_schema}.dqx_rule_definitions (rule_id, rule_name, rule_function, rule_dimension, created_date, argument_placeholder, is_arg_mendatory) VALUES {vals}"
+                with self.get_connection().cursor() as cur: cur.execute(query)
+                
+            return len(new_rows)
+        except Exception as e:
+            print(f"Error: {e}")
+            return 0
+
+
+
 if __name__ == "__main__":
     # --- 2. Load Config & Profile ---
     env = 'DEV'
