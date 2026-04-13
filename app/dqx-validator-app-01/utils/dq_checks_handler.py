@@ -1,4 +1,3 @@
-from databricks.connect import DatabricksSession
 from databricks.sdk import WorkspaceClient
 from databricks.labs.dqx.profiler.profiler import DQProfiler
 from databricks.labs.dqx.config import LLMModelConfig,InputConfig
@@ -13,29 +12,13 @@ import pandas as pd
 
 class dqx_handler:
     def __init__(self):
-        try:
-            DatabricksSession.builder.getOrCreate().stop()
-        except:
-            pass
-        self._spark = DatabricksSession.builder.serverless().getOrCreate()
+        self.spark = spark
         self.ws = WorkspaceClient()
         self.llm_cfg = LLMModelConfig("databricks/databricks-meta-llama-3-3-70b-instruct")
         self.profiler = DQProfiler(workspace_client=self.ws, llm_model_config=self.llm_cfg)
         self.generator = DQGenerator(self.ws, llm_model_config=self.llm_cfg)
         self.profile_data_path = os.path.join(os.getcwd(), "profile_data")
         os.makedirs(self.profile_data_path, exist_ok=True)
-
-
-    @property
-    def spark(self):
-        try:
-            if hasattr(self, '_spark') and self._spark:
-                self._spark.sql("SELECT 1").collect()
-                return self._spark
-        except Exception:
-            pass 
-        self._spark = DatabricksSession.builder.serverless().getOrCreate()
-        return self._spark
     
 
     @staticmethod
