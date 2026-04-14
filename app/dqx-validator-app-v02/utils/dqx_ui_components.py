@@ -123,40 +123,10 @@ class DqxUIComponents:
             # Display Summary Stats
             st.subheader("📊 Summary Stats")
             st.dataframe(pd.DataFrame(res_summary_stats), use_container_width=True)
-            
-            summary_stats_json = json.dumps(res_summary_stats, indent=2, default=self.dqx.json_serial)
-            btn_col1, _ = st.columns(2)
-            with btn_col1:
-                st.download_button(
-                    label="📥 Download Summary Stats (JSON)",
-                    data=summary_stats_json,
-                    file_name="summary_stats.json",
-                    mime="application/json"
-                )
-
-            st.divider()
 
             # Display Profile Checks
             st.subheader("✅ Profile Inferred Rules")
             st.dataframe(pd.DataFrame(profile_checks), use_container_width=True)
-            
-            btn_col3, btn_col4, _ = st.columns([1, 1, 0.1])
-            with btn_col3:
-                st.download_button(
-                    label="📥 Download Profile Checks (JSON)",
-                    data=json.dumps(profile_checks, indent=2, default=self.dqx.json_serial),
-                    file_name="profile_checks.json",
-                    mime="application/json"
-                )
-            with btn_col4:
-                st.download_button(
-                    label="📥 Download Profile Checks (YAML)",
-                    data=yaml.dump(profile_checks, default_flow_style=False),
-                    file_name="profile_checks.yaml",
-                    mime="text/yaml"
-                )
-
-            st.divider()
 
             # 6. Bulk Save Logic (Moved outside the nested IF)
             if st.button("💾 Save Rules ", use_container_width=True, type="primary"):
@@ -270,22 +240,6 @@ class DqxUIComponents:
                 current_rules = st.session_state[rules_key]
                 rules_display = [r.__dict__ if hasattr(r, '__dict__') else r for r in current_rules]
                 st.dataframe(pd.DataFrame(rules_display), use_container_width=True)
-
-                # Download Option
-                st.download_button(
-                    label="Download AI Rules (JSON)",
-                    data=json.dumps(current_rules, indent=2, default=self.dqx.json_serial),
-                    file_name=f"ai_rules_{table}.json",
-                    mime="application/json",
-                    key=f"dl_{full_table_name}"
-                )
-                st.download_button(
-                    label="Download AI Rules (YAML)",
-                    data=yaml.dump(current_rules, default_flow_style=False),
-                    file_name=f"ai_rules_{table}.yaml",
-                    mime="text/yaml",
-                    key=f"dl_yaml_{full_table_name}"
-                )
 
                 # --- PHASE 3: SAVE TO DB ---
                 if st.button("💾 Save AI Generated Checks", use_container_width=True, type="primary", key=f"save_btn_{full_table_name}"):

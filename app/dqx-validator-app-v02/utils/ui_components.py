@@ -43,7 +43,7 @@ class UIComponents:
             st.dataframe(df, use_container_width=True, hide_index=True)
 
 
-    def render_manage_dq_mapping(self, cat, schema, table):
+    def render_active_dq_rules(self, cat, schema, table):
         st.subheader("🛡️ Active Rules")
         df_mappings = self.db.fetch_dqx_mappings(self.config_catalog, self.config_schema, cat, schema, table)
         
@@ -175,7 +175,7 @@ class UIComponents:
                                             rule_id
                                         )
                                     st.session_state[f"rules_to_deactivate_{col_name}"] = []
-                                    self.db.fetch_dqx_mappings(self.db, self.config_catalog, self.config_schema, cat, schema, table).clear()
+                                    self.db.fetch_dqx_mappings.clear(self.db, self.config_catalog, self.config_schema, cat, schema, table)
                                     st.cache_data.clear()
                                     st.success("Updated!")
                                     st.rerun()
@@ -293,7 +293,7 @@ class UIComponents:
                         progress_bar.progress((success_count + len(error_logs)) / total_rules)
 
                 if success_count > 0:
-                    self.db.fetch_dqx_mappings.clear() 
+                    self.db.fetch_dqx_mappings.clear(self.db, self.config_catalog, self.config_schema, cat, schema, table)
                     st.cache_data.clear()
                     st.session_state.show_execution_summary = True
                     st.success(f"Successfully registered {success_count} rules!")
