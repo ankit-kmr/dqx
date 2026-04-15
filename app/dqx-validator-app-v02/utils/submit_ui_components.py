@@ -120,6 +120,10 @@ class UISubmitComponents:
 
         # 3. Execution Section
         st.subheader("🚀 Execution")
+        # 1. Initialize session state to hold workflow results
+        if 'workflow_result' not in st.session_state:
+            st.session_state.workflow_result = None
+
         if st.button("Run DQX Workflow", type="primary", disabled=not has_rules, use_container_width=True):
             with st.spinner("Triggering Workflow..."):
                 try:
@@ -129,16 +133,29 @@ class UISubmitComponents:
                         run_resp = self.wm.get_run_status(run_id)
                         run_page_url = run_resp.json().get('run_page_url')
                         
-                        st.success(f"✅ Workflow Triggered! Run ID: {run_id}")
-                        if run_page_url:
-                            st.link_button("Open Databricks Run", run_page_url)
+                        # send email and capture status
+                        try:
+                            self.send_success_email('dev.databricks26@gmail.com', run_id, run_page_url, f"{cat}.{schema}.{table}")
+                            email_status = "✅ Email sent successfully!"
+                        except Exception:
+                            email_status = "❌ Email notification failed to send."
 
-                            # Email Notification
-                            if "email" in st.secrets:
-                                self.send_success_email('dev.databricks26@gmail.com', run_id, run_page_url, f"{cat}.{schema}.{table}")
-                                st.toast(f"Notification sent to {recipient}")
+                        # 2. Save everything into session state
+                        st.session_state.workflow_result = {
+                            "run_id": run_id,
+                            "url": run_page_url,
+                            "email_msg": email_status
+                        }
                     else:
                         st.error(f"Trigger failed: {resp.text}")
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
+
+        if st.session_state.workflow_result:
+            res = st.session_state.workflow_result
+            st.success(f"🚀 **Triggered Workflow:** {res['run_id']}")
+            if res['url']:
+                st.link_button("🔗 Open Databricks Job Run", res['url'])
+            st.info(res['email_msg'])
+
 

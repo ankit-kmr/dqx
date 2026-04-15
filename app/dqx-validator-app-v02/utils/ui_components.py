@@ -108,8 +108,10 @@ class UIComponents:
         df_cols = self.db.fetch_columns(cat, schema, table)
 
         # --- NEW: Fetch Existing Mappings for this Table ---
-        df_existing = self.db.fetch_dqx_mappings(self.config_catalog, self.config_schema, cat, schema, table)
-
+        df_existing = self.db.fetch_dqx_mappings(self.config_catalog, self.config_schema, cat, schema, table).reset_index(drop=True)
+        df_existing = df_existing.loc[:, ~df_existing.columns.duplicated()].copy()
+        df_existing.reset_index(drop=True, inplace=True)
+        
         bulk_configs = []
         all_args_filled = True
         
@@ -125,63 +127,71 @@ class UIComponents:
             if col_name in st.session_state.get('hidden_columns', set()): 
                 continue
             
-            # --- EXISTING RULES SECTION (Using Deactivate Logic) ---
+            # --- EXISTING RULES SECTION (Corrected Logic) ---
             if not df_existing.empty:
                 col_rules = df_existing[df_existing['column'] == col_name]
                 
-                if not col_rules.empty:
-                    # Show only active rules (assuming your fetch logic doesn't already filter is_active)
-                    active_col_rules = col_rules[col_rules.get('is_active', True) == True]
-                    
-                    if not active_col_rules.empty:
-                        with st.expander(f"📜 Existing Rules for {col_name}", expanded=False):
-                            # Table header
-                            t_cols = st.columns([2, 2, 2, 2, 1])
-                            t_cols[0].markdown("**Rule Name**")
-                            t_cols[1].markdown("**Criticality**")
-                            t_cols[2].markdown("**Arguments**")
-                            t_cols[3].markdown("**Description**")
-                            t_cols[4].markdown("**Action**")
-                            st.divider()
-                            
-                            # Track rules to deactivate for this column
-                            if f"rules_to_deactivate_{col_name}" not in st.session_state:
-                                st.session_state[f"rules_to_deactivate_{col_name}"] = []
+                # Initialize session state for tracking deactivations
+                deactivate_key = f"rules_to_deactivate_{col_name}"
+                if deactivate_key not in st.session_state:
+                    st.session_state[deactivate_key] = []
 
-                            for _, e_row in active_col_rules.iterrows():
-                                row_key = f"{col_name}_{e_row['rule_id']}"
-                                r_cols = st.columns([2, 2, 2, 2, 1])
-                                r_cols[0].markdown(f"{e_row['rule_name']}")
-                                r_cols[1].markdown(f"`{e_row['criticality']}`")
-                                r_cols[2].markdown(f"`{e_row['arguments']}`")
-                                r_cols[3].markdown(f"{e_row['rule_description']}")
-                                if r_cols[4].button("❌", key=f"deactivate_{row_key}"):
-                                    st.session_state[f"rules_to_deactivate_{col_name}"].append(row_key)
-                                    st.rerun()
+                if not col_rules.empty:
+                    # Filter for active rules AND rules not currently marked for deactivation in this session
+                    active_col_rules = col_rules[col_rules.get('is_active', True) == True]
+                    display_rules = active_col_rules[~active_col_rules['rule_id'].astype(str).isin(st.session_state[deactivate_key])].copy()
+                    display_rules.reset_index(drop=True, inplace=True)
+
+                    with st.expander(f"📜 Existing Rules for {col_name} ({len(display_rules)})", expanded=False):
+                        t_cols = st.columns([2, 2, 2, 2, 1])
+                        t_cols[0].write("**Rule Name**")
+                        t_cols[1].write("**Criticality**")
+                        t_cols[2].write("**Arguments**")
+                        t_cols[3].write("**Description**")
+                        t_cols[4].write("**Action**")
+                        st.divider()
+
+                        for _, e_row in display_rules.iterrows():
+                            r_id = str(e_row['rule_id'])
+                            r_cols = st.columns([2, 2, 2, 2, 1])
+                            r_cols[0].write(e_row['rule_name'])
+                            r_cols[1].code(e_row['criticality'])
+                            r_cols[2].code(e_row['arguments'])
+                            r_cols[3].write(e_row['rule_description'])
                             
-                            # Bulk delete and undo buttons
-                            if st.session_state[f"rules_to_deactivate_{col_name}"]:
-                                st.warning(f"{len(st.session_state[f'rules_to_deactivate_{col_name}'])} rules marked for deactivation.")
-                                b_col1, b_col2 = st.columns([2, 8])
-                                if b_col1.button("💾 Save Changes", key=f"save_{col_name}"):
-                                    full_table = f"{cat}.{schema}.{table}"
-                                    for key in st.session_state[f"rules_to_deactivate_{col_name}"]:
-                                        rule_id = key.split("_", 1)[1]
-                                        self.db.deactivate_dq_rule(
-                                            self.config_catalog, 
-                                            self.config_schema, 
-                                            full_table, 
-                                            col_name, 
-                                            rule_id
-                                        )
-                                    st.session_state[f"rules_to_deactivate_{col_name}"] = []
-                                    self.db.fetch_dqx_mappings.clear(self.db, self.config_catalog, self.config_schema, cat, schema, table)
-                                    st.cache_data.clear()
-                                    st.success("Updated!")
-                                    st.rerun()
-                                if b_col2.button("Undo All", key=f"undo_{col_name}"):
-                                    st.session_state[f"rules_to_deactivate_{col_name}"] = []
-                                    st.rerun()
+                            # If user clicks X, add rule_id to session state and rerun to update UI
+                            if r_cols[4].button("❌", key=f"btn_deact_{col_name}_{r_id}"):
+                                st.session_state[deactivate_key].append(r_id)
+                                st.rerun()
+
+                        # Action Footer
+                        if st.session_state[deactivate_key]:
+                            st.warning(f"⚠️ {len(st.session_state[deactivate_key])} rules marked for deactivation.")
+                            b_col1, b_col2 = st.columns([1, 4])
+                            
+                            if b_col1.button("💾Save", key=f"save_final_{col_name}", type="primary"):
+                                full_table = f"{cat}.{schema}.{table}"
+                                
+                                for r_id_to_del in st.session_state[deactivate_key]:
+                                    self.db.deactivate_dq_rule(
+                                        self.config_catalog, 
+                                        self.config_schema, 
+                                        full_table, 
+                                        col_name, 
+                                        r_id_to_del
+                                    )
+                                
+                                # Clear session state and cache
+                                st.session_state[deactivate_key] = []
+                                # Important: Use your specific DB clear method
+                                self.db.fetch_dqx_mappings.clear(self.db, self.config_catalog, self.config_schema, cat, schema, table)
+                                st.cache_data.clear()
+                                st.success("Changes saved to database!")
+                                st.rerun()
+                            
+                            if b_col2.button("↩️Undo", key=f"undo_{col_name}"):
+                                st.session_state[deactivate_key] = []
+                                st.rerun()
 
 
             if col_name not in st.session_state.column_rule_counts:

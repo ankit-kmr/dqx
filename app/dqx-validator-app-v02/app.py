@@ -113,33 +113,33 @@ if cat_select != "-- Select --" and table_select != "-- Select --":
     elif current == 1:
         ui.render_active_dq_rules(cat_select, schema_select, table_select)
         c1, c2 = st.columns(2)
-        if c1.button("⬅️ Back", use_container_width=True): go_back(); st.rerun()
-        if c2.button("Next ➡️", use_container_width=True): go_next(); st.rerun()
+        if c1.button("⬅️ Back"): go_back(); st.rerun()
+        if c2.button("Next ➡️"): go_next(); st.rerun()
 
     elif current == 2:
         dqx_ui.render_profile_rule_generator(cat_select, schema_select, table_select)
-        c1, c2, c3 = st.columns(3)
-        if c1.button("⬅️ Back"): go_back(); st.rerun()
-        if c2.button("Skip to Update ⏭️"): skip_to_update(); st.rerun()
-        if c3.button("Next ➡️"): go_next(); st.rerun()
+        c21, c22, c23 = st.columns(3)
+        if c21.button("⬅️ Back"): go_back(); st.rerun()
+        if c22.button("Skip to Update ⏭️"): skip_to_update(); st.rerun()
+        if c23.button("Next ➡️"): go_next(); st.rerun()
 
     elif current == 3:
         dqx_ui.render_ai_rule_generator(cat_select, schema_select, table_select)
-        c1, c2, c3 = st.columns(3)
-        if c1.button("⬅️ Back"): go_back(); st.rerun()
-        if c2.button("Skip to Update ⏭️"): skip_to_update(); st.rerun()
-        if c3.button("Next ➡️"): go_next(); st.rerun()
+        c31, c32, c33 = st.columns(3)
+        if c31.button("⬅️ Back"): go_back(); st.rerun()
+        if c32.button("Skip to Update ⏭️"): skip_to_update(); st.rerun()
+        if c33.button("Next ➡️"): go_next(); st.rerun()
 
     elif current == 4:
         ui.render_add_rules_mapping(cat_select, schema_select, table_select)
-        c1, c2 = st.columns(2)
-        if c1.button("⬅️ Back"): go_back(); st.rerun()
-        if c2.button("Next ➡️"): go_next(); st.rerun()
+        c41, c42 = st.columns(2)
+        if c41.button("⬅️ Back"): go_back(); st.rerun()
+        if c42.button("Next ➡️"): go_next(); st.rerun()
     
     elif current == 5:
         ui_submit.render_submit(cat_select, schema_select, table_select)
-        if st.button("⬅️ Back"):
-            go_back()
+        c51, _ = st.columns(2)
+        if c51.button("⬅️ Back"): go_back(); st.rerun()
 
 else:
     # Reset step if table selection changes to keep flow consistent
