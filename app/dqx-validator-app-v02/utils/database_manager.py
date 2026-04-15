@@ -60,8 +60,8 @@ class DatabaseManager:
     def fetch_dqx_mappings(_self, _config_catalog, _config_schema, _src_catalog, _src_schema, _table):
         query = f"""
         WITH ranked_rules AS (
-            SELECT m.column_name AS column, r.rule_dimension, r.rule_name, r.description as rule_description,
-                   m.criticality, m.arguments, m.is_active, m.rule_id,
+            SELECT r.rule_id, r.rule_function ,r.rule_dimension, r.rule_name, r.description as rule_description,
+                   m.criticality, m.arguments, m.is_active, m.rule_id, m.column_name AS column,
                    ROW_NUMBER() OVER (PARTITION BY m.table_name, m.column_name, r.rule_function ORDER BY m.updated_at DESC) as row_num
             FROM {_config_catalog}.{_config_schema}.dqx_rule_mappings m
             JOIN {_config_catalog}.{_config_schema}.dqx_rule_definitions r ON m.rule_id = r.rule_id

@@ -43,7 +43,7 @@ db, wm = init_base_managers()
 dqx_h = dqx_handler(get_spark()) 
 ui = UIComponents(db, wm, config_catalog, config_schema)
 dqx_ui = DqxUIComponents(db, dqx_h, config_catalog, config_schema)
-ui_submit = UISubmitComponents(db, wm, dqx_h, config_catalog, config_schema)
+ui_submit = UISubmitComponents(db, dqx_h, wm, config_catalog, config_schema)
 
 StateManager.initialize()
 
@@ -132,15 +132,14 @@ if cat_select != "-- Select --" and table_select != "-- Select --":
 
     elif current == 4:
         ui.render_add_rules_mapping(cat_select, schema_select, table_select)
-        if st.button("⬅️ Back"):
-            go_back()
-            st.rerun()
+        c1, c2 = st.columns(2)
+        if c1.button("⬅️ Back"): go_back(); st.rerun()
+        if c2.button("Next ➡️"): go_next(); st.rerun()
     
     elif current == 5:
         ui_submit.render_submit(cat_select, schema_select, table_select)
         if st.button("⬅️ Back"):
             go_back()
-            st.rerun
 
 else:
     # Reset step if table selection changes to keep flow consistent
