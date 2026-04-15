@@ -10,19 +10,20 @@ from email.mime.multipart import MIMEMultipart
 
 
 class UISubmitComponents:
-    def __init__(self, db_manager, dqx_h , workflow_manager, config_catalog, config_schema):
+    def __init__(self, db_manager, dqx_h , workflow_manager, config_catalog, config):
         self.db = db_manager
         self.wm = workflow_manager
         self.dqx = dqx_h
-        self.config_catalog = config_catalog
-        self.config_schema = config_schema
+        self.config = config
+        self.config_catalog = self.config.get('DEFAULT', 'dqx_catalog_name')
+        self.config_schema = self.config.get('DEFAULT', 'dqx_config_schema')
     
 
     def send_success_email(self, recipient_email, run_id, run_url, table_name):
         smtp_server = "smtp.gmail.com"
         smtp_port = 587
-        sender_email = st.secrets["email"]["address"]
-        sender_password = st.secrets["email"]["password"]
+        sender_email = self.config.get('EMAIL', 'address')
+        sender_password = self.config.get('EMAIL', 'password')
 
         subject = f"🚀 DQX Workflow Triggered: {table_name}"
         body = f"""
@@ -56,7 +57,7 @@ class UISubmitComponents:
             return True
         except Exception as e:
             st.error(f"Failed to send email: {e}")
-            return False
+            return False,str(e)
 
 
     def render_submit(self, cat, schema, table):
@@ -134,8 +135,7 @@ class UISubmitComponents:
 
                             # Email Notification
                             if "email" in st.secrets:
-                                recipient = st.session_state.get("user_email", "admin@example.com")
-                                self.send_success_email(recipient, run_id, run_page_url, f"{cat}.{schema}.{table}")
+                                self.send_success_email('dev.databricks26@gmail.com', run_id, run_page_url, f"{cat}.{schema}.{table}")
                                 st.toast(f"Notification sent to {recipient}")
                     else:
                         st.error(f"Trigger failed: {resp.text}")

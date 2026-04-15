@@ -43,7 +43,7 @@ db, wm = init_base_managers()
 dqx_h = dqx_handler(get_spark()) 
 ui = UIComponents(db, wm, config_catalog, config_schema)
 dqx_ui = DqxUIComponents(db, dqx_h, config_catalog, config_schema)
-ui_submit = UISubmitComponents(db, dqx_h, wm, config_catalog, config_schema)
+ui_submit = UISubmitComponents(db, dqx_h, wm, config_catalog, config)
 
 StateManager.initialize()
 
