@@ -17,6 +17,7 @@ class WorkflowManager:
                 "source_catalog_name": source_catalog,
                 "config_schema_name": config,
                 "source_schema_name": src,
+                "target_schema_name": "dqx_silver",
                 "table_name": table
             }
         }
