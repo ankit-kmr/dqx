@@ -96,7 +96,7 @@ class UIComponents:
 
 
     def render_add_rules_mapping(self, cat, schema, table):
-        st.subheader("✅ Configure New Rules Mapping")
+        st.subheader("📝 Create/Modify Rules Manually")
         col_title, col_reset = st.columns([8, 2])
         if col_reset.button("🧹Clear", use_container_width=True, help="Clear all inputs and reset column visibility"):
             self.reset_configuration_form()
