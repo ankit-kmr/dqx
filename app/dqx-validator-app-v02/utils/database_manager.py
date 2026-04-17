@@ -45,16 +45,24 @@ class DatabaseManager:
             cursor.execute(f"SELECT COUNT(*) FROM {catalog}.{schema}.{table}")
             rows = cursor.fetchone()[0]
             return f"catalog_name: {catalog}\ntable_name: {table}\ntotal_columns: {len(cols)}\nrow_count: {rows}"
-
+    
     @st.cache_data(ttl=1200, show_spinner='')
     def fetch_columns(_self, catalog, schema, table):
         with _self.get_connection().cursor() as cursor:
             cursor.execute(f"DESCRIBE TABLE {catalog}.{schema}.{table}")
             data = cursor.fetchall()
-            if not data: return pd.DataFrame()
+            if not data: 
+                return pd.DataFrame()
             df = pd.DataFrame(data).iloc[:, [0, 1]]
             df.columns = ['col_name', 'data_type']
+            df['col_name'] = df['col_name'].str.strip()
+            header_mask = df['col_name'].str.startswith('#', na=False)
+            if header_mask.any():
+                first_header_idx = header_mask.idxmax()
+                df = df.iloc[:first_header_idx] 
+            df = df[df['col_name'] != '']
             return df
+
 
     @st.cache_data(ttl=30, show_spinner='')
     def fetch_dqx_mappings(_self, _config_catalog, _config_schema, _src_catalog, _src_schema, _table):

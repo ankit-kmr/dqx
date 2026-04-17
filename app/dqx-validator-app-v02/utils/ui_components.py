@@ -182,13 +182,14 @@ class UIComponents:
                 st.session_state.column_rule_counts[col_name] = 1
 
             for i in range(st.session_state.column_rule_counts[col_name]):
-                row_key = f"t4_{col_name}_{i}"
+                row_key = f"t4_{col_name}_{i}_{idx}"  # Add idx to ensure uniqueness
                 r_c1, r_c2, r_c3, r_c4, r_c5, r_c6, r_c7 = st.columns([2, 1.5, 2, 1.2, 2, 0.4, 0.4])
                 
                 # Column Name & Hide Logic
                 if i == 0:
                     sub = r_c1.columns([0.3, 0.7])
-                    if sub[0].button("🗑️", key=f"hide_{col_name}"):
+                    hide_btn_key = f"hide_{col_name}_{idx}"
+                    if sub[0].button("🗑️", key=hide_btn_key):
                         st.session_state.hidden_columns.add(col_name)
                         st.rerun()
                     sub[1].markdown(f"**{col_name}**")
@@ -214,7 +215,6 @@ class UIComponents:
                 
                 # Dynamic Placeholder and Example Text Autofill
                 example_text = f"e.g: {p_val}"
-                # autofill_key = f"autofill_{row_key}"
                 args = r_c5.text_input("Args", placeholder=p_val, label_visibility="collapsed", key=f"args_{row_key}")
                 r_c5.caption(example_text)
 
