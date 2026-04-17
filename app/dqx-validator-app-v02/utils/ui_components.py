@@ -44,55 +44,39 @@ class UIComponents:
 
 
     def render_active_dq_rules(self, cat, schema, table):
-        st.subheader("🛡️ Active Rules")
-        df_mappings = self.db.fetch_dqx_mappings(self.config_catalog, self.config_schema, cat, schema, table)
+        st.subheader("🛡️ Active DQ Rules")
         
-        # Determine if we have rules to run
-        has_rules = not df_mappings.empty
+        df_mappings = self.db.fetch_dqx_mappings(
+            self.config_catalog, self.config_schema, cat, schema, table
+        )
 
-        if has_rules:
-            m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns([1.5, 2.5, 3, 3, 0.8])
-            m_col1.write("**Column**")
-            m_col2.write("**Rule Name**")
-            m_col3.write("**Description**")
-            m_col4.write("**Arguments**")
-            m_col5.write("**Action**")
-            st.divider()
+        if not df_mappings.empty:
+            # Clean up data for display
+            display_df = df_mappings[[
+                'column', 'rule_name', 'rule_description', 'arguments'
+            ]].copy()
+            
+            # Rename columns for a polished look
+            display_df.columns = ["Column", "Rule", "Description", "Parameters"]
 
-            for idx, m_row in df_mappings.iterrows():
-                rule_key = f"{m_row['column']}_{m_row['rule_id']}"
-                if rule_key in st.session_state.rules_to_deactivate:
-                    continue
-                
-                r_col1, r_col2, r_col3, r_col4, r_col5 = st.columns([1.5, 2.5, 3, 3, 0.8])
-                r_col1.text(m_row['column'])
-                r_col2.info(f"**{m_row['rule_name']}**")
-                r_col3.caption(m_row['rule_description'])
-                r_col4.caption(str(m_row['arguments']) if m_row['arguments'] else "{}")
-                
-                if r_col5.button("❌", key=f"del_{idx}"):
-                    st.session_state.rules_to_deactivate.append(rule_key)
-                    st.rerun()
-
-            # Handling Deactivation
-            if st.session_state.rules_to_deactivate:
-                st.warning(f"⚠️ {len(st.session_state.rules_to_deactivate)} rules marked for deactivation.")
-                c1, c2 = st.columns([2, 8])
-                if c1.button("💾 Save Changes", type="primary"):
-                    full_table = f"{cat}.{schema}.{table}"
-                    for key in st.session_state.rules_to_deactivate:
-                        match = df_mappings[(df_mappings['column'] + "_" + df_mappings['rule_id']) == key]
-                        if not match.empty:
-                            row = match.iloc[0]
-                            self.db.deactivate_dq_rule(cat, self.config_schema, full_table, row['column'], row['rule_id'])
-                    st.session_state.rules_to_deactivate = []
-                    st.cache_data.clear()
-                    st.success("Updated!"); st.rerun()
-                if c2.button("Undo All"):
-                    st.session_state.rules_to_deactivate = []; st.rerun()
+            # Use st.dataframe for an interactive, scrollable table
+            st.dataframe(
+                display_df,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Column": st.column_config.TextColumn("Column", help="Target column for the rule"),
+                    "Rule": st.column_config.TextColumn("Rule Name"),
+                    "Description": st.column_config.TextColumn("Description"),
+                    "Parameters": st.column_config.TextColumn("Arguments")
+                }
+            )
+            
+            st.caption(f"Showing {len(display_df)} active rules for {cat}.{schema}.{table}")
         else:
-            st.info("No DQX mappings found.")
+            st.info("No active DQ rules found.")
         st.divider()
+
 
 
     def render_add_rules_mapping(self, cat, schema, table):
