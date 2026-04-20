@@ -30,14 +30,6 @@ class WorkflowManager:
         api_url = f"https://{self.hostname}/api/2.1/jobs/runs/get?run_id={run_id}"
         response = requests.get(api_url, headers=self.headers)
         response.raise_for_status()
-        # state = run_data.get("state", {})
-        # life_cycle = state.get("life_cycle_state") # e.g., PENDING, RUNNING, TERMINATED
-        # result = state.get("result_state")         # e.g., SUCCESS, FAILED, CANCELLED
-
-        # if life_cycle in ["PENDING", "RUNNING", "BLOCKED"]:
-        #     return "RUNNING"
-        
-        # return "SUCCESS" if result == "SUCCESS" else "FAILED"
         return response
 
 
