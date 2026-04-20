@@ -67,8 +67,12 @@ with st.sidebar:
     tables = ["-- Select --"]
     if schema_select != "-- Select --":
         tables += db.fetch_tables(cat_select, schema_select)
+    prev_table = st.session_state.get("prev_table_select", "-- Select --")
     table_select = st.selectbox("Table", options=tables, key="table_select")
-
+    # Reset step if table selection changes
+    if table_select != prev_table:
+        st.session_state.step = 0
+    st.session_state.prev_table_select = table_select
 
 # --- 5. Main Content Area ---
 if cat_select != "-- Select --" and table_select != "-- Select --":
