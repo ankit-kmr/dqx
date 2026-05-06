@@ -16,31 +16,36 @@ st.set_page_config(layout="wide")
 # Custom CSS to shift the title up
 st.markdown("""
     <style>
-        /* 1. Reduce the main container padding */
+        /* Reduce main container padding */
         .block-container {
             padding-top: 1rem !important;
         }
 
-        /* 2. Make the header transparent so it doesn't block the view, 
-              but keep it 'visible' so the three dots work */
+        /* Keep header menu functional but transparent */
         [data-testid="stHeader"] {
             background: rgba(0,0,0,0);
             color: transparent;
         }
 
-        /* 3. Pull the title up using a larger negative margin 
-              to compensate for the header still being 'there' */
+        /* Shift title up */
         .stHeading h1 {
             margin-top: -20px; 
             padding-top: 0px;
         }
 
-        /* 4. Align sidebar padding */
+        /* Sidebar: Set to a smaller, fixed width */
+        [data-testid="stSidebar"] {
+            min-width: 250px !important;
+            max-width: 300px !important;
+        }
+
+        /* Match sidebar top padding */
         [data-testid="stSidebar"] > div:first-child {
             padding-top: 1rem;
         }
     </style>
 """, unsafe_allow_html=True)
+
 
 
 # --- 2. Load Config & Profile ---

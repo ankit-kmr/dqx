@@ -79,14 +79,14 @@ class dqx_handler:
         return _self.generator.generate_dq_rules(profile_objs)
     
     
-    @st.cache_data(ttl=1200, show_spinner='')
+    @st.cache_data(ttl=1200, show_spinner=False)
     def ai_assisted_rule_generation(_self, user_prompt, input_table_name):
         return _self.generator.generate_dq_rules_ai_assisted(
             user_input=user_prompt,
             input_config=InputConfig(location=input_table_name)
         )
 
-    @st.cache_data(ttl=1200, show_spinner='')
+    @st.cache_data(ttl=1200, show_spinner=False)
     def ai_detect_primary_key(_self, input_table_name):
         return _self.profiler.detect_primary_keys_with_llm(
             input_config=InputConfig(location=input_table_name)
