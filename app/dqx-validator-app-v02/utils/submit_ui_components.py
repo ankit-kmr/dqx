@@ -97,7 +97,7 @@ class UISubmitComponents:
             st.warning("No active rules found for this table.")
 
         # 2. Export Section
-        st.markdown("### 📤 Export Configuration")
+        st.markdown("### 📤 Export DQ Rules")
         exp_col1, exp_col2 = st.columns(2)
         
         with exp_col1:
@@ -124,8 +124,8 @@ class UISubmitComponents:
         if 'workflow_result' not in st.session_state:
             st.session_state.workflow_result = None
 
-        if st.button("Run DQX Workflow", type="primary", disabled=not has_rules, use_container_width=True):
-            with st.spinner("Triggering Workflow..."):
+        if st.button("Apply/Run DQ Rules", type="primary", disabled=not has_rules, use_container_width=True):
+            with st.spinner("🚀 Running Workflow to Apply Rules..."):
                 try:
                     resp = self.wm.trigger_workflow(self.config_catalog, cat, self.config_schema, schema, table)
                     if resp.status_code == 200:

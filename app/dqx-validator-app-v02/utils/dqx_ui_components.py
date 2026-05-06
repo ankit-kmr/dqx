@@ -46,32 +46,29 @@ class DqxUIComponents:
         full_table_name = f"{cat}.{schema}.{table}"
         columns_df = self.db.fetch_columns(cat, schema, table)
         all_columns = columns_df['col_name'].tolist()
-        # st.subheader(f"Profiling Configuration: {full_table_name}")
 
-        # Top right reset button
-        _, reset_col = st.columns([9, 1])
+        # Reset Logic -------------------------------------------------------------------------
+        head_col, reset_col, spacer = st.columns([0.38, 0.12, 0.5], gap="small")
+        with head_col:
+            st.markdown("### Select Columns to Profile")
         with reset_col:
-            if st.button("🔄 Reset", key=f"reset_{full_table_name}", type="secondary"):
+            # Reduced padding to 18px to better align with H3 baseline
+            st.markdown("<div style='padding-top: 18px;'></div>", unsafe_allow_html=True)
+            if st.button("🔄 Reset", key=f"reset_{full_table_name}", type="secondary", use_container_width=True):
                 st.session_state[f"profile_cols_{full_table_name}"] = all_columns.copy()
                 st.rerun()
 
-        # 1. Table Structure with Delete Buttons
-        st.markdown("### Select Columns to Profile")
-        
-        # Use session state to track columns
+        # --------------------------------------------------------------------------------------
         if f"profile_cols_{full_table_name}" not in st.session_state:
             st.session_state[f"profile_cols_{full_table_name}"] = all_columns.copy()
         profile_columns = st.session_state[f"profile_cols_{full_table_name}"]
 
-        # Header
-        h_col1, h_col2 = st.columns([4, 1])
-        h_col1.write("**Column Name**")
-        h_col2.write("**Action**")
-
+        # Column Selection UI
         for col in profile_columns:
             row_col1, row_col2 = st.columns([4, 1])
             row_col1.text(col)
-            if row_col2.button("Delete", key=f"delete_{col}"):
+            # Fixed width via container alignment
+            if row_col2.button("Delete", key=f"delete_{col}", use_container_width=True):
                 profile_columns.remove(col)
                 st.session_state[f"profile_cols_{full_table_name}"] = profile_columns
                 st.rerun()
@@ -79,11 +76,20 @@ class DqxUIComponents:
         selected_columns = profile_columns.copy()
         st.divider()
 
-        # 2. Action Buttons
-        btn_col1, btn_col2, _, _ = st.columns([2, 2, 2, 4])
+        # 1. & 2. BUTTON LOGIC & FIXED SIZING
+        btn_col1, btn_col2, btn_spacer = st.columns([2, 2, 4])
         
-        gen_pressed = btn_col1.button("Generate Profile Summary", type="primary", use_container_width=True)
-        save_pressed = btn_col2.button("Save Profile Summary", use_container_width=True, type="secondary")
+        # Check if summary exists to enable/disable the Save button
+        has_generated_data = f"active_profile_checks_{full_table_name}" in st.session_state
+        gen_pressed = btn_col1.button("Generate Summary & Infer DQ Rules", type="primary", use_container_width=True)
+        
+        # Disable "Save Profile Summary" until "Generate" has been run successfully
+        save_pressed = btn_col2.button(
+            "Save Summary", 
+            use_container_width=True, 
+            type="secondary",
+            disabled=not has_generated_data
+        )
 
         # 3. Save Logic
         if save_pressed:
@@ -91,8 +97,7 @@ class DqxUIComponents:
                 self.dqx.save_profile_data(full_table_name, columns_list=all_columns)
                 st.success(f"Profile data for {full_table_name} updated successfully!")
 
-        
-        # 4. Generate/Display Logic
+        # 4. Generate Logic
         if gen_pressed:
             if not selected_columns:
                 st.error("Please select at least one column.")
@@ -102,36 +107,42 @@ class DqxUIComponents:
                 res_summary_stats, res_profiles = self.dqx.load_profile_data(full_table_name, selected_columns)
                 profile_checks = self.dqx.generate_profile_checks(res_profiles, full_table_name)
 
-                # 1. Insert new rules
                 self.db.insert_rules(self.config_catalog, self.config_schema, profile_checks)
                 self.db.fetch_rule_definitions.clear(self.db, self.config_catalog, self.config_schema)
                 fresh_rules_df = self.db.fetch_rule_definitions(self.config_catalog, self.config_schema)
 
-                # --- SAVE TO SESSION STATE TO PERSIST AFTER CLICKING OTHER BUTTONS ---
                 st.session_state[f"active_profile_checks_{full_table_name}"] = profile_checks
                 st.session_state[f"active_summary_stats_{full_table_name}"] = res_summary_stats
                 st.session_state[f"bulk_configs_{full_table_name}"] = self.create_bulk_configs(
                     profile_checks , fresh_rules_df
                 )
+                st.rerun() # Rerun to enable the Save button immediately
 
-        # 5. Display Logic (Triggered if data exists in Session State)
-        if f"active_profile_checks_{full_table_name}" in st.session_state:
+        # 5. Display Logic
+        if has_generated_data:
             profile_checks = st.session_state[f"active_profile_checks_{full_table_name}"]
             res_summary_stats = st.session_state[f"active_summary_stats_{full_table_name}"]
 
-            # Display Summary Stats
             st.subheader("📊 Summary Stats")
             st.dataframe(pd.DataFrame(res_summary_stats), use_container_width=True)
 
-            # Display Profile Checks
             st.subheader("✅ Inferred DQ Rules")
             st.dataframe(pd.DataFrame(profile_checks), use_container_width=True)
 
-            # 6. Bulk Save Logic (Moved outside the nested IF)
-            if st.button("💾 Save Rules ", use_container_width=True, type="primary"):
+            # 6. Bulk Save Rules Button Logic
+            # Check if rules have already been saved in this session
+            rules_saved_key = f"rules_saved_{full_table_name}"
+            if rules_saved_key not in st.session_state:
+                st.session_state[rules_saved_key] = False
+
+            if st.button(
+                "💾 Add DQ Rules", 
+                use_container_width=True, 
+                type="primary", 
+                disabled=st.session_state[rules_saved_key] # Disable if True
+            ):
                 bulk_configs = st.session_state.get(f"bulk_configs_{full_table_name}", [])
-                
-                with st.spinner("⏳ Inserting records into database..."):
+                with st.spinner("⏳ Updating dq rules..."):
                     try:
                         self.db.reg_multiple_dq_rule(
                             src_catalog=cat,
@@ -141,11 +152,15 @@ class DqxUIComponents:
                             table=table,
                             rules_data=bulk_configs
                         )
-                        st.success(f"✅ Success! {len(bulk_configs)} profile checks saved to database.")
+                        # Set success state and rerun to refresh the button UI
+                        st.session_state[rules_saved_key] = True
+                        st.success(f"✅ Success! {len(bulk_configs)} rules saved.")
+                        st.rerun() 
                     except Exception as e:
-                        st.error(f"❌ Error saving bulk profile checks: {str(e)}")
+                        st.error(f"❌ Error: {str(e)}")
 
-  
+
+
     def render_ai_rule_generator(self, cat, schema, table):
         st.subheader("AI-Assisted Rule Generation")
         st.info("Describe your data quality requirements in natural language (e.g., 'Ensure emails follow a valid regex').")
@@ -170,10 +185,9 @@ class DqxUIComponents:
             st.dataframe(columns_df, use_container_width=True)
 
         with right_col:
-            st.subheader("AI Detected Primary Keys")
             detect_col, _ = st.columns([1, 3])
             with detect_col:
-                detect_pk_pressed = st.button("Detect Primary Key", key=f"detect_pk_{full_table_name}", type="primary")
+                detect_pk_pressed = st.button("Detect Primary Keys(AI)", key=f"detect_pk_{full_table_name}", type="primary")
             
             primary_key_checks = None
             if detect_pk_pressed:
@@ -195,8 +209,8 @@ class DqxUIComponents:
 
             # User input
             user_prompt = st.text_area(
-                "Requirement Prompt",
-                placeholder="Email addresses must be valid.",
+                "Define Data Quality in Simple English, Generate DQ Rules(AI)",
+                placeholder="Email addresses must be valid.\nNo null values in 'age'.\nPrimary key must be unique.",
                 height=150,
                 key="ai_prompt_input"
             )

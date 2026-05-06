@@ -145,7 +145,7 @@ try:
             "🧪 Inferred DQ Rules",
             "🤖 AI-Assisted DQ Rules",
             "🆕 Manage DQ Rules",
-            "✅ Final Submit"
+            "✅ Review and Submit"
         ]
 
         # Initialize session state for navigation
