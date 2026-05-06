@@ -33,6 +33,16 @@ st.markdown("""
             padding-top: 0px;
         }
 
+        /* Target the Object Name specifically */
+        .object-name-container {
+            margin-top: 10px !important;    /* Gap between Header and Object Name */
+            margin-left: 20px !important;   /* Shift to the right */
+            margin-bottom: 20px !important; /* Gap between Object Name and Wizard */
+            color: #555;
+            font-size: 16px !important;     /* Reduced text size */
+            font-weight: 500;
+        }
+
         /* Sidebar: Set to a smaller, fixed width */
         [data-testid="stSidebar"] {
             min-width: 250px !important;
@@ -42,6 +52,16 @@ st.markdown("""
         /* Match sidebar top padding */
         [data-testid="stSidebar"] > div:first-child {
             padding-top: 1rem;
+        }
+
+        /* Fixed height for labels to keep bars level */
+        .wizard-label {
+            height: 30px;
+            display: flex;
+            align-items: flex-end;
+            margin-bottom: 5px;
+            font-size: 14px;
+            white-space: nowrap; /* Prevents wrapping on smaller screens */
         }
     </style>
 """, unsafe_allow_html=True)
@@ -113,7 +133,11 @@ try:
 
     # --- 5. Main Content Area ---
     if cat_select != "-- Select --" and table_select != "-- Select --":
-        
+        st.markdown(
+            f'<div class="object-name-container">Object Name: {cat_select}.{schema_select}.{table_select}</div>', 
+            unsafe_allow_html=True
+        )
+
         # 1. Define Step Labels
         wizard_steps = [
             "🔍 Overview",
@@ -132,14 +156,19 @@ try:
         cols = st.columns(len(wizard_steps))
         for i, step_label in enumerate(wizard_steps):
             if i == st.session_state.step:
-                cols[i].markdown(f"**{step_label}**")
-                cols[i].markdown("---") 
+                label_html = f'<div class="wizard-label"><b>{step_label}</b></div>'
+                line_color = "#28a745"
             elif i < st.session_state.step:
-                cols[i].markdown(f"{step_label}")
-                cols[i].markdown("<hr style='border: 1px solid #28a745; margin: 0;'>", unsafe_allow_html=True)
+                label_html = f'<div class="wizard-label">{step_label}</div>'
+                line_color = "#28a745"
             else:
-                cols[i].markdown(f"<span style='color:gray'>{step_label}</span>", unsafe_allow_html=True)
-                cols[i].markdown("<hr style='border: 1px solid #ccc; margin: 0;'>", unsafe_allow_html=True)
+                label_html = f'<div class="wizard-label" style="color:gray">{step_label}</div>'
+                line_color = "#ccc"
+            # Render both label and bar
+            cols[i].markdown(label_html, unsafe_allow_html=True)
+            cols[i].markdown(f"<hr style='border: 3px solid {line_color}; margin: 0; padding: 0;'>", unsafe_allow_html=True)
+
+
 
         # 3. Navigation Helper Functions
         def go_next(): st.session_state.step += 1
