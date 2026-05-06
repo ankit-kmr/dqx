@@ -52,7 +52,7 @@ class dqx_handler:
         return file_path
 
 
-    @st.cache_data(ttl=1200, show_spinner='')
+    @st.cache_data(ttl=1200, show_spinner=False)
     def load_profile_data(_self, input_table_name, columns_list=None):
         table_dir = os.path.join(_self.profile_data_path, input_table_name.replace('.', '_'))
         file_path = os.path.join(table_dir, "profile.json")
