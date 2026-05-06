@@ -39,7 +39,7 @@ st.markdown("""
             margin-left: 20px !important;   /* Shift to the right */
             margin-bottom: 20px !important; /* Gap between Object Name and Wizard */
             color: #555;
-            font-size: 16px !important;     /* Reduced text size */
+            font-size: 18px !important;     /* Increased text size */
             font-weight: 500;
         }
 
@@ -134,7 +134,7 @@ try:
     # --- 5. Main Content Area ---
     if cat_select != "-- Select --" and table_select != "-- Select --":
         st.markdown(
-            f'<div class="object-name-container">Object Name: {cat_select}.{schema_select}.{table_select}</div>', 
+            f'<div class="object-name-container"><b>Object Name:</b> {cat_select}.{schema_select}.{table_select}</div>', 
             unsafe_allow_html=True
         )
 

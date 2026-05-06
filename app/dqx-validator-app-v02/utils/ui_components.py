@@ -39,6 +39,7 @@ class UIComponents:
         with col2:
             st.markdown("**Column Details**")
             df = self.db.fetch_columns(cat, schema, table)
+            df = df.rename(columns={"col_name": "Field Name", "data_type": "Data Type"})
             st.dataframe(df, use_container_width=True, hide_index=True)
 
 
