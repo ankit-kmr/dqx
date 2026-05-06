@@ -19,7 +19,6 @@ class UIComponents:
         st.session_state.rules_to_deactivate = []
 
         # 2. Clear all dynamic widget keys from session_state
-        # This identifies keys starting with 'dim_', 'rule_', 'crit_', or 'args_'
         keys_to_delete = [
             key for key in st.session_state.keys() 
             if any(key.startswith(prefix) for prefix in ["dim_t4_", "rule_t4_", "crit_t4_", "args_t4_"])
@@ -31,7 +30,7 @@ class UIComponents:
         st.rerun()
         
     def render_object_overview(self, cat, schema, table):
-        st.subheader("📋 Object Overview")
+        st.subheader("📋 Overview")
         col1, col2 = st.columns([2, 5])
         with col1:
             st.markdown("**Table Overview**")

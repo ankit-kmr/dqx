@@ -46,8 +46,7 @@ class DqxUIComponents:
         full_table_name = f"{cat}.{schema}.{table}"
         columns_df = self.db.fetch_columns(cat, schema, table)
         all_columns = columns_df['col_name'].tolist()
-
-        st.subheader(f"Profiling Configuration: {full_table_name}")
+        # st.subheader(f"Profiling Configuration: {full_table_name}")
 
         # Top right reset button
         _, reset_col = st.columns([9, 1])
@@ -125,7 +124,7 @@ class DqxUIComponents:
             st.dataframe(pd.DataFrame(res_summary_stats), use_container_width=True)
 
             # Display Profile Checks
-            st.subheader("✅ Profile Inferred Rules")
+            st.subheader("✅ Inferred DQ Rules")
             st.dataframe(pd.DataFrame(profile_checks), use_container_width=True)
 
             # 6. Bulk Save Logic (Moved outside the nested IF)

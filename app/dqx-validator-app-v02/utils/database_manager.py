@@ -44,7 +44,7 @@ class DatabaseManager:
             cols = cursor.fetchall()
             cursor.execute(f"SELECT COUNT(*) FROM {catalog}.{schema}.{table}")
             rows = cursor.fetchone()[0]
-            return f"catalog_name: {catalog}\ntable_name: {table}\ntotal_columns: {len(cols)}\nrow_count: {rows}"
+            return f"catalog_name: {catalog}\nschema_name: {schema}\ntable_name: {table}\ntotal_columns: {len(cols)}\nrow_count: {rows}"
     
     @st.cache_data(ttl=1200, show_spinner='')
     def fetch_columns(_self, catalog, schema, table):
