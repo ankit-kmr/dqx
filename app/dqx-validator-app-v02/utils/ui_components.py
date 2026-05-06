@@ -35,7 +35,7 @@ class UIComponents:
         with col1:
             st.markdown("**Table Overview**")
             overview = self.db.fetch_table_definition(cat, schema, table)
-            st.text(overview)
+            st.code(overview, language=None)
         with col2:
             st.markdown("**Column Details**")
             df = self.db.fetch_columns(cat, schema, table)

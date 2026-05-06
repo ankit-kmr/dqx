@@ -11,7 +11,37 @@ from utils.dqx_ui_components import DqxUIComponents
 from utils.submit_ui_components import UISubmitComponents
 
 # --- 1. Page Configuration ---
-st.set_page_config(layout="wide", page_title="Data Quality Accelerator")
+st.set_page_config(layout="wide")
+
+# Custom CSS to shift the title up
+st.markdown("""
+    <style>
+        /* 1. Reduce the main container padding */
+        .block-container {
+            padding-top: 1rem !important;
+        }
+
+        /* 2. Make the header transparent so it doesn't block the view, 
+              but keep it 'visible' so the three dots work */
+        [data-testid="stHeader"] {
+            background: rgba(0,0,0,0);
+            color: transparent;
+        }
+
+        /* 3. Pull the title up using a larger negative margin 
+              to compensate for the header still being 'there' */
+        .stHeading h1 {
+            margin-top: -20px; 
+            padding-top: 0px;
+        }
+
+        /* 4. Align sidebar padding */
+        [data-testid="stSidebar"] > div:first-child {
+            padding-top: 1rem;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 
 # --- 2. Load Config & Profile ---
 env = 'DEV'
@@ -81,7 +111,7 @@ try:
         
         # 1. Define Step Labels
         wizard_steps = [
-            "🔍 Object Overview",
+            "🔍 Overview",
             "🛡️ Active DQ Rules", 
             "🧪 Inferred DQ Rules",
             "🤖 AI-Assisted DQ Rules",
@@ -159,4 +189,7 @@ try:
 except Exception as e:
     st.error(f"⚠️ A critical error occurred: {e}")
     if st.button("Restart Application"):
+        st.cache_resource.clear()
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
         st.rerun()
