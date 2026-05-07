@@ -220,9 +220,9 @@ try:
             if c42.button("Next ➡️"): go_next(); st.rerun()
         
         elif current == 5:
-            ui_submit.render_submit(cat_select, schema_select, table_select)
+            submit_status = ui_submit.render_submit(cat_select, schema_select, table_select)
             c51, _ = st.columns(2)
-            if c51.button("⬅️ Back"): go_back(); st.rerun()
+            if c51.button("⬅️ Back", disabled=(submit_status == 'submitted')): go_back(); st.rerun()
 
     else:
         # Reset step if table selection changes to keep flow consistent

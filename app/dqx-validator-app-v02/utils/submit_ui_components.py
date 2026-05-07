@@ -157,5 +157,6 @@ class UISubmitComponents:
             if res['url']:
                 st.link_button("🔗 Open Databricks Job Run", res['url'])
             st.info(res['email_msg'])
+            return 'submitted'
 
 
