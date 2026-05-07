@@ -32,13 +32,21 @@ class dqx_handler:
         raise TypeError(f"Type {type(obj)} not serializable")
 
 
-    def save_profile_data(self, input_table_name, columns_list=None):
+    def save_profile_data(self, input_table_name, columns_list=None, sample_percent=None):
         # Profile the table and save the results
         run_date = datetime.now().strftime("%Y%m%d")
         if columns_list is None or not columns_list:
             raise ValueError("columns_list must be provided and non-empty.")
-
+        
         df = self.spark.read.table(input_table_name)
+        # Add sampling logic
+        if sample_percent is not None:
+            if not (0 < sample_percent <= 100):
+                raise ValueError("sample_percent must be between 0 and 100.")
+            # Spark sample uses a fraction (0.0 to 1.0)
+            df = df.sample(withReplacement=False, fraction=sample_percent / 100.0)
+
+        # creating summary profile
         summary_stats, profiles = self.profiler.profile(
             df=df,
             columns=columns_list
@@ -53,12 +61,12 @@ class dqx_handler:
 
 
     @st.cache_data(ttl=1200, show_spinner=False)
-    def load_profile_data(_self, input_table_name, columns_list=None):
+    def load_profile_data(_self, input_table_name, columns_list=None, sample_percent=None):
         table_dir = os.path.join(_self.profile_data_path, input_table_name.replace('.', '_'))
         file_path = os.path.join(table_dir, "profile.json")
         
         if not os.path.exists(file_path):
-            _self.save_profile_data(input_table_name, columns_list)
+            _self.save_profile_data(input_table_name, columns_list, sample_percent)
         
         time.sleep(5)
         with open(file_path, "r") as f:
@@ -103,8 +111,8 @@ if __name__ == "__main__":
     customer_email is valid.
     customer_state is a string with less than 5 letter.
     """
-    handler.save_profile_data(tbl, handler.spark.read.table(tbl).columns)
-    res_summary_stats, res_profiles = handler.load_profile_data(tbl, ["customer_phone","customer_email"])
+    handler.save_profile_data(tbl, handler.spark.read.table(tbl).columns, '50')
+    res_summary_stats, res_profiles = handler.load_profile_data(tbl, ["customer_phone","customer_email"], '20')
     checks = handler.generate_profile_checks(res_profiles,tbl)
     print(res_summary_stats,'\n',res_profiles)
     print(checks)

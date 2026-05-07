@@ -12,6 +12,7 @@ class UIComponents:
         self.config_catalog = config_catalog
         self.config_schema = config_schema
 
+
     def reset_configuration_form(self):
         # 1. Clear the structural and visibility states
         st.session_state.column_rule_counts = {}
@@ -29,6 +30,7 @@ class UIComponents:
         # 3. Force a rerun to refresh the UI
         st.rerun()
         
+
     def render_object_overview(self, cat, schema, table):
         st.subheader("📋 Overview")
         col1, col2 = st.columns([2, 5])
@@ -76,7 +78,6 @@ class UIComponents:
         else:
             st.info("No active DQ rules found.")
         st.divider()
-
 
 
     def render_add_rules_mapping(self, cat, schema, table):

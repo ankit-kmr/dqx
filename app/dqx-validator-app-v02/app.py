@@ -16,56 +16,65 @@ st.set_page_config(layout="wide")
 # Custom CSS to shift the title up
 st.markdown("""
     <style>
-        /* Reduce main container padding */
+        /* 1. Force the main container to hug the left edge and use full width */
         .block-container {
             padding-top: 1rem !important;
+            padding-left: 2rem !important; /* Set your desired left margin here */
+            padding-right: 2rem !important;
+            max-width: 100% !important;
+            margin-left: 0px !important;
         }
 
-        /* Keep header menu functional but transparent */
+        /* 2. Remove default Streamlit centering flexbox */
+        [data-testid="stMainViewContainer"] {
+            align-items: flex-start !important;
+        }
+
+        /* 3. Header management */
         [data-testid="stHeader"] {
             background: rgba(0,0,0,0);
             color: transparent;
         }
 
-        /* Shift title up */
+        /* 4. Shift title up and ensure left alignment */
         .stHeading h1 {
             margin-top: -20px; 
             padding-top: 0px;
+            text-align: left;
         }
 
-        /* Target the Object Name specifically */
+        /* 5. Object Name: Removed large left margin to keep it flush */
         .object-name-container {
-            margin-top: 10px !important;    /* Gap between Header and Object Name */
-            margin-left: 20px !important;   /* Shift to the right */
-            margin-bottom: 20px !important; /* Gap between Object Name and Wizard */
+            margin-top: 10px !important;
+            margin-left: 0px !important; 
+            margin-bottom: 20px !important;
             color: #555;
-            font-size: 18px !important;     /* Increased text size */
+            font-size: 18px !important;
             font-weight: 500;
         }
 
-        /* Sidebar: Set to a smaller, fixed width */
+        /* 6. Sidebar width constraints */
         [data-testid="stSidebar"] {
             min-width: 250px !important;
             max-width: 300px !important;
         }
 
-        /* Match sidebar top padding */
+        /* Sidebar top padding */
         [data-testid="stSidebar"] > div:first-child {
             padding-top: 1rem;
         }
 
-        /* Fixed height for labels to keep bars level */
+        /* 7. Wizard/Progress Bar Labels */
         .wizard-label {
             height: 30px;
             display: flex;
             align-items: flex-end;
             margin-bottom: 5px;
             font-size: 14px;
-            white-space: nowrap; /* Prevents wrapping on smaller screens */
+            white-space: nowrap;
         }
     </style>
 """, unsafe_allow_html=True)
-
 
 
 # --- 2. Load Config & Profile ---

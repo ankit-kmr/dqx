@@ -48,15 +48,14 @@ class DqxUIComponents:
         all_columns = columns_df['col_name'].tolist()
 
         # Reset Logic -------------------------------------------------------------------------
-        head_col, reset_col, spacer = st.columns([0.38, 0.12, 0.5], gap="small")
+        head_col, reset_col, spacer = st.columns([0.38, 0.12, 0.5], vertical_alignment="bottom",gap="small")
         with head_col:
-            st.markdown("### Select Columns to Profile")
+            st.markdown("<h3 style='margin:0;'>Select Columns to Profile</h3>", unsafe_allow_html=True)
         with reset_col:
-            # Reduced padding to 18px to better align with H3 baseline
-            st.markdown("<div style='padding-top: 18px;'></div>", unsafe_allow_html=True)
             if st.button("🔄 Reset", key=f"reset_{full_table_name}", type="secondary", use_container_width=True):
                 st.session_state[f"profile_cols_{full_table_name}"] = all_columns.copy()
                 st.rerun()
+
 
         # --------------------------------------------------------------------------------------
         if f"profile_cols_{full_table_name}" not in st.session_state:
@@ -77,7 +76,7 @@ class DqxUIComponents:
         st.divider()
 
         # 1. & 2. BUTTON LOGIC & FIXED SIZING
-        btn_col1, btn_col2, btn_spacer = st.columns([2, 2, 4])
+        btn_col1, btn_col2, spacer_mid, dropdown_col, btn_spacer = st.columns([2, 2, 0.5, 1.5, 2])
         
         # Check if summary exists to enable/disable the Save button
         has_generated_data = f"active_profile_checks_{full_table_name}" in st.session_state
@@ -85,16 +84,28 @@ class DqxUIComponents:
         
         # Disable "Save Profile Summary" until "Generate" has been run successfully
         save_pressed = btn_col2.button(
-            "Save Summary", 
+            "Refresh Summary", 
             use_container_width=True, 
             type="secondary",
             disabled=not has_generated_data
         )
 
-        # 3. Save Logic
+        # Dropdown for Data Percent
+        with dropdown_col:
+            sample_fraction_percent = st.selectbox(
+                "Data %",
+                options=list(range(10, 100)),
+                index=90-10, # Default to 90
+                key=f"sample_pct_{full_table_name}",
+                label_visibility="collapsed" # Keeps UI clean next to buttons
+            )
+            # Optional: Add a small label above if collapsed is too bare
+            st.caption("Sample %")
+
+        # 3. Save/Refresh Logic
         if save_pressed:
             with st.spinner("Refreshing profile data..."):
-                self.dqx.save_profile_data(full_table_name, columns_list=all_columns)
+                self.dqx.save_profile_data(full_table_name, all_columns, sample_fraction_percent)
                 st.success(f"Profile data for {full_table_name} updated successfully!")
 
         # 4. Generate Logic
@@ -104,7 +115,7 @@ class DqxUIComponents:
                 return
 
             with st.spinner("Generating profiles..."):
-                res_summary_stats, res_profiles = self.dqx.load_profile_data(full_table_name, selected_columns)
+                res_summary_stats, res_profiles = self.dqx.load_profile_data(full_table_name, selected_columns, sample_fraction_percent)
                 profile_checks = self.dqx.generate_profile_checks(res_profiles, full_table_name)
 
                 self.db.insert_rules(self.config_catalog, self.config_schema, profile_checks)
@@ -158,7 +169,6 @@ class DqxUIComponents:
                         st.rerun() 
                     except Exception as e:
                         st.error(f"❌ Error: {str(e)}")
-
 
 
     def render_ai_rule_generator(self, cat, schema, table):
