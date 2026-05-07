@@ -192,6 +192,7 @@ class DqxUIComponents:
 
         with left_col:
             st.subheader("Table Columns")
+            columns_df = columns_df.rename(columns={"col_name": "Field Name", "data_type": "Data Type"})
             st.dataframe(columns_df, use_container_width=True)
 
         with right_col:
@@ -224,14 +225,14 @@ class DqxUIComponents:
                 height=150,
                 key="ai_prompt_input"
             )
-            gen_pressed = st.button("Generate AI Rules", type="primary", key=f"gen_ai_rules_{full_table_name}")
+            gen_pressed = st.button("Generate DQ Rules", type="primary", key=f"gen_ai_rules_{full_table_name}")
 
             # --- PHASE 1: GENERATION
             if gen_pressed:
                 if not user_prompt.strip():
                     st.warning("Please enter some requirements first.")
                 else:
-                    with st.spinner("AI is analyzing table context and generating rules..."):
+                    with st.spinner("AI is analyzing table context and generating dq rules..."):
                         try:
                             ai_rules = self.dqx.ai_assisted_rule_generation(
                                 user_prompt=user_prompt,
@@ -249,25 +250,25 @@ class DqxUIComponents:
                             st.session_state[bulk_key] = self.create_bulk_configs(
                                 ai_rules , fresh_rules_df
                             )
-                            st.success("Rules generated successfully!")
+                            st.success("DQ Rules generated successfully!")
                         except Exception as e:
-                            st.error(f"Error generating AI rules: {str(e)}")
+                            st.error(f"Error generating AI dq rules: {str(e)}")
                             if "ENDPOINT_NOT_FOUND" in str(e):
                                 st.info("Check if your LLM Model name in dqx_handler is correct.")
 
             # --- PHASE 2: PERSISTENT UI (Triggered if rules exist in session state) ---
             if rules_key in st.session_state:
                 st.divider()
-                st.subheader("Generated AI Rules")
+                st.subheader("Generated DQ Rules")
                 
                 current_rules = st.session_state[rules_key]
                 rules_display = [r.__dict__ if hasattr(r, '__dict__') else r for r in current_rules]
                 st.dataframe(pd.DataFrame(rules_display), use_container_width=True)
 
                 # --- PHASE 3: SAVE TO DB ---
-                if st.button("💾 Save AI Generated Checks", use_container_width=True, type="primary", key=f"save_btn_{full_table_name}"):
+                if st.button("💾 Save DQ Rules", use_container_width=True, type="primary", key=f"save_btn_{full_table_name}"):
                     bulk_configs = st.session_state.get(bulk_key, [])
-                    with st.spinner("⏳ Inserting AI-generated rules into database..."):
+                    with st.spinner("⏳ Inserting AI-generated dq rules into database..."):
                         try:
                             self.db.reg_multiple_dq_rule(
                                 src_catalog=cat,
@@ -277,7 +278,7 @@ class DqxUIComponents:
                                 table=table,
                                 rules_data=bulk_configs
                             )
-                            st.success(f"✅ Success! {len(bulk_configs)} AI-generated rules saved to database.")
+                            st.success(f"✅ Success! {len(bulk_configs)} dq rules saved to database.")
                             # Optional: Clear the state if you want the UI to reset after saving
                             del st.session_state[rules_key]
                         except Exception as e:
