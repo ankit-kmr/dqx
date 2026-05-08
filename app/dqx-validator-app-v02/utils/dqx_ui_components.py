@@ -257,14 +257,11 @@ class DqxUIComponents:
                             # 1. Insert new rules
                             self.db.insert_rules(self.config_catalog, self.config_schema, ai_rules)
                             self.db.fetch_rule_definitions.clear(self.db, self.config_catalog, self.config_schema)
-                            # 3. Fetch fresh definitions for mapping
-                            fresh_rules_df = self.db.fetch_rule_definitions(self.config_catalog, self.config_schema)
-                            
+                            # # 3. Fetch fresh definitions for mapping
+                            # fresh_rules_df = self.db.fetch_rule_definitions(self.config_catalog, self.config_schema)
                             # Save to session state so they persist across reruns
                             st.session_state[rules_key] = ai_rules
-                            st.session_state[bulk_key] = self.create_bulk_configs(
-                                ai_rules , fresh_rules_df
-                            )
+                            # st.session_state[bulk_key] = self.create_bulk_configs(ai_rules , fresh_rules_df)
                             st.success("DQ Rules generated successfully!")
                         except Exception as e:
                             st.error(f"Error generating AI dq rules: {str(e)}")
@@ -277,12 +274,34 @@ class DqxUIComponents:
                 st.subheader("Generated DQ Rules")
                 
                 current_rules = st.session_state[rules_key]
-                rules_display = [r.__dict__ if hasattr(r, '__dict__') else r for r in current_rules]
-                st.dataframe(pd.DataFrame(rules_display), use_container_width=True)
+                # st.dataframe(pd.DataFrame(current_rules), use_container_width=True)
+                edited_ai_rules = st.data_editor(
+                    pd.DataFrame(current_rules),
+                    use_container_width=True,
+                    num_rows="dynamic", 
+                    key=f"editor_{full_table_name}"
+                )
+                # Convert edited_profile_checks DataFrame to list of dicts for create_bulk_configs
+                edited_ai_rules_dict = []
+                for row in edited_ai_rules.to_dict(orient="records"):
+                    if isinstance(row.get("check"), str):
+                        try:
+                            row["check"] = eval(row["check"])
+                        except Exception:
+                            row["check"] = json.loads(row["check"].replace("'", '"'))
+                    edited_ai_rules_dict.append(row)
+
+                # Update the source session state so it survives the next rerun
+                st.session_state[rules_key] = edited_ai_rules_dict
+
+                # 3. Fetch fresh definitions for mapping
+                fresh_rules_df = self.db.fetch_rule_definitions(self.config_catalog, self.config_schema)    
+                st.session_state[bulk_key] = self.create_bulk_configs(st.session_state[rules_key] , fresh_rules_df)
 
                 # --- PHASE 3: SAVE TO DB ---
                 if st.button("💾 Save DQ Rules", use_container_width=True, type="primary", key=f"save_btn_{full_table_name}"):
                     bulk_configs = st.session_state.get(bulk_key, [])
+
                     with st.spinner("⏳ Inserting AI-generated dq rules into database..."):
                         try:
                             self.db.reg_multiple_dq_rule(
