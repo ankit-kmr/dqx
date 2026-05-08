@@ -52,7 +52,7 @@ class DqxUIComponents:
         with head_col:
             st.markdown("<h3 style='margin:0;'>Select Columns to Profile</h3>", unsafe_allow_html=True)
         with reset_col:
-            if st.button("🔄 Reset", key=f"reset_{full_table_name}", type="secondary", use_container_width=True):
+            if st.button("🔄Reset", key=f"reset_{full_table_name}", type="secondary", use_container_width=True):
                 st.session_state[f"profile_cols_{full_table_name}"] = all_columns.copy()
                 st.rerun()
 
@@ -95,7 +95,7 @@ class DqxUIComponents:
             sample_fraction_percent = st.selectbox(
                 "Data %",
                 options=list(range(10, 100)),
-                index=90-10, # Default to 90
+                index=99-10, # Default to 90
                 key=f"sample_pct_{full_table_name}",
                 label_visibility="collapsed" # Keeps UI clean next to buttons
             )
@@ -121,27 +121,40 @@ class DqxUIComponents:
                 self.db.insert_rules(self.config_catalog, self.config_schema, profile_checks)
                 self.db.fetch_rule_definitions.clear(self.db, self.config_catalog, self.config_schema)
                 fresh_rules_df = self.db.fetch_rule_definitions(self.config_catalog, self.config_schema)
-
+                
                 st.session_state[f"active_profile_checks_{full_table_name}"] = profile_checks
                 st.session_state[f"active_summary_stats_{full_table_name}"] = res_summary_stats
-                st.session_state[f"bulk_configs_{full_table_name}"] = self.create_bulk_configs(
-                    profile_checks , fresh_rules_df
-                )
+                st.session_state[f"bulk_configs_{full_table_name}"] = self.create_bulk_configs(profile_checks , fresh_rules_df)
                 st.rerun() # Rerun to enable the Save button immediately
 
         # 5. Display Logic
         if has_generated_data:
-            profile_checks = st.session_state[f"active_profile_checks_{full_table_name}"]
+            profile_checks_key = f"active_profile_checks_{full_table_name}"
             res_summary_stats = st.session_state[f"active_summary_stats_{full_table_name}"]
 
             st.subheader("📊 Summary Stats")
             st.dataframe(pd.DataFrame(res_summary_stats), use_container_width=True)
 
             st.subheader("✅ Inferred DQ Rules")
-            st.dataframe(pd.DataFrame(profile_checks), use_container_width=True)
+            # st.dataframe(pd.DataFrame(st.session_state[profile_checks_key]), use_container_width=True)
+
+            edited_profile_checks = st.data_editor(
+                pd.DataFrame(st.session_state[profile_checks_key]),
+                use_container_width=True,
+                num_rows="dynamic", 
+                key=f"editor_{full_table_name}"
+            )
+            # Convert edited_profile_checks DataFrame to list of dicts for create_bulk_configs
+            edited_profile_checks_dicts = []
+            for row in edited_profile_checks.to_dict(orient="records"):
+                if isinstance(row.get("check"), str):
+                    try:
+                        row["check"] = eval(row["check"])
+                    except Exception:
+                        row["check"] = json.loads(row["check"].replace("'", '"'))
+                edited_profile_checks_dicts.append(row)
 
             # 6. Bulk Save Rules Button Logic
-            # Check if rules have already been saved in this session
             rules_saved_key = f"rules_saved_{full_table_name}"
             if rules_saved_key not in st.session_state:
                 st.session_state[rules_saved_key] = False
@@ -150,10 +163,13 @@ class DqxUIComponents:
                 "💾 Add DQ Rules", 
                 use_container_width=True, 
                 type="primary", 
-                disabled=st.session_state[rules_saved_key] # Disable if True
+                disabled=st.session_state[rules_saved_key]
             ):
-                bulk_configs = st.session_state.get(f"bulk_configs_{full_table_name}", [])
-                with st.spinner("⏳ Updating dq rules..."):
+                # # Use the edited dataframe values instead of the raw session state
+                fresh_rules_df = self.db.fetch_rule_definitions(self.config_catalog, self.config_schema)
+                bulk_configs = self.create_bulk_configs(edited_profile_checks_dicts , fresh_rules_df)
+                
+                with st.spinner("⏳ updating dq rules..."):
                     try:
                         self.db.reg_multiple_dq_rule(
                             src_catalog=cat,
@@ -163,10 +179,9 @@ class DqxUIComponents:
                             table=table,
                             rules_data=bulk_configs
                         )
-                        # Set success state and rerun to refresh the button UI
                         st.session_state[rules_saved_key] = True
                         st.success(f"✅ Success! {len(bulk_configs)} rules saved.")
-                        st.rerun() 
+                        # st.rerun() 
                     except Exception as e:
                         st.error(f"❌ Error: {str(e)}")
 
@@ -283,3 +298,4 @@ class DqxUIComponents:
                             del st.session_state[rules_key]
                         except Exception as e:
                             st.error(f"❌ Error saving AI-generated rules: {str(e)}")
+

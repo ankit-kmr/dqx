@@ -68,9 +68,17 @@ class DatabaseManager:
     def fetch_dqx_mappings(_self, _config_catalog, _config_schema, _src_catalog, _src_schema, _table):
         query = f"""
         WITH ranked_rules AS (
-            SELECT r.rule_id, r.rule_function ,r.rule_dimension, r.rule_name, r.description as rule_description,
-                   m.criticality, m.arguments, m.is_active, m.rule_id, m.column_name AS column,
-                   ROW_NUMBER() OVER (PARTITION BY m.table_name, m.column_name, r.rule_function ORDER BY m.updated_at DESC) as row_num
+            SELECT 
+                r.rule_id AS rule_id,
+                r.rule_function AS rule_function,
+                r.rule_dimension AS rule_dimension,
+                r.rule_name AS rule_name,
+                r.description AS rule_description,
+                m.criticality AS criticality,
+                m.arguments AS arguments,
+                m.is_active AS is_active,
+                m.column_name AS column,
+                ROW_NUMBER() OVER (PARTITION BY m.table_name, m.column_name, r.rule_function ORDER BY m.updated_at DESC) as row_num
             FROM {_config_catalog}.{_config_schema}.dqx_rule_mappings m
             JOIN {_config_catalog}.{_config_schema}.dqx_rule_definitions r ON m.rule_id = r.rule_id
             WHERE m.table_name = '{_src_catalog}.{_src_schema}.{_table}' AND m.is_active = true
@@ -228,12 +236,12 @@ if __name__ == "__main__":
     # --- 2. Load Config & Profile ---
     env = 'DEV'
     config = configparser.ConfigParser()
-    config.read('/Workspace/Repos/dev.databricks26@gmail.com/dqx/app/dqx-validator-app-01/config.conf')
+    config.read('/Workspace/Repos/dev.databricks26@gmail.com/dqx/app/dqx-validator-app-v02/config.conf')
     # Extract variables based on selection
     HOST = config.get(env, 'server_hostname')
     PATH = config.get(env, 'http_path')
     TOKEN = config.get(env, 'token')
     db_manager = DatabaseManager(HOST, PATH, TOKEN)
-    rule_defs_df = db_manager.fetch_rule_definitions('dqx_sandbox', 'dqx_config')
+    rule_defs_df = db_manager.fetch_dqx_mappings('dqx_sandbox', 'dqx_config', 'dqx_sandbox','dqx_bronze','payment')
     print(rule_defs_df)
     

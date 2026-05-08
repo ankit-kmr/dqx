@@ -105,21 +105,15 @@ if __name__ == "__main__":
     handler = dqx_handler(spark)
     print(handler.ws.config.host)
     print(handler.ws.config.token)
-    tbl = 'dqx_sandbox.dqx_bronze.customer'
+    tbl = 'dqx_sandbox.dqx_bronze.payment'
     inp = """
     Phone numbers should follow standard format.
     customer_email is valid.
     customer_state is a string with less than 5 letter.
     """
-    handler.save_profile_data(tbl, handler.spark.read.table(tbl).columns, '50')
-    res_summary_stats, res_profiles = handler.load_profile_data(tbl, ["customer_phone","customer_email"], '20')
+    # handler.save_profile_data(tbl, handler.spark.read.table(tbl).columns, 99)
+    res_summary_stats, res_profiles = handler.load_profile_data(tbl, handler.spark.read.table(tbl).columns, 99)
     checks = handler.generate_profile_checks(res_profiles,tbl)
     print(res_summary_stats,'\n',res_profiles)
     print(checks)
-    # primary_key_checks = handler.ai_detect_primary_key(tbl)
-    # print(primary_key_checks)
-    # print(type(primary_key_checks))
-    # print(handler.ai_assisted_rule_generation(inp,tbl))
-    # print("------------------------------------------\n")
     
-

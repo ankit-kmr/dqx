@@ -82,9 +82,12 @@ class UIComponents:
 
     def render_add_rules_mapping(self, cat, schema, table):
         st.subheader("📝 Create/Modify Rules Manually")
-        col_title, col_reset = st.columns([8, 2])
-        if col_reset.button("🧹Clear", use_container_width=True, help="Clear all inputs and reset column visibility"):
+        col_title, col_reset, col_refresh = st.columns([8, 2, 2])
+        if col_reset.button("🔄Reset", use_container_width=True, help="Reset all inputs and column visibility"):
             self.reset_configuration_form()
+        if col_refresh.button("🌀Reload", use_container_width=True, help="Clear cache and refresh panel"):
+            self.db.fetch_dqx_mappings.clear(self.config_catalog, self.config_schema, cat, schema, table)
+            st.rerun()
         # ---------------------------------------
 
         # 1. Fetch metadata needed for the form
