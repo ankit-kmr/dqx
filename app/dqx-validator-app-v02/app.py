@@ -5,8 +5,8 @@ from databricks.connect import DatabricksSession
 from utils.state_manager import StateManager
 from utils.database_manager import DatabaseManager
 from utils.workflow_manager import WorkflowManager
-from utils.ui_components import UIComponents
 from utils.dq_checks_handler import dqx_handler
+from utils.ui_components import UIComponents
 from utils.dqx_ui_components import DqxUIComponents
 from utils.submit_ui_components import UISubmitComponents
 
