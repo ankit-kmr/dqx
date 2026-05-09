@@ -154,6 +154,9 @@ class DqxUIComponents:
                         row["check"] = json.loads(row["check"].replace("'", '"'))
                 edited_profile_checks_dicts.append(row)
 
+            # # Update session state with edited profile checks
+            # st.session_state[f"active_profile_checks_{full_table_name}"] = edited_profile_checks_dicts
+
             # 6. Bulk Save Rules Button Logic
             rules_saved_key = f"rules_saved_{full_table_name}"
             if rules_saved_key not in st.session_state:
@@ -313,8 +316,8 @@ class DqxUIComponents:
                                 rules_data=bulk_configs
                             )
                             st.success(f"✅ Success! {len(bulk_configs)} dq rules saved to database.")
-                            # Optional: Clear the state if you want the UI to reset after saving
-                            del st.session_state[rules_key]
+                            # # Optional: Clear the state if you want the UI to reset after saving
+                            # del st.session_state[rules_key]
                         except Exception as e:
                             st.error(f"❌ Error saving AI-generated rules: {str(e)}")
 
