@@ -39,7 +39,7 @@ class dqx_handler:
             raise ValueError("columns_list must be provided and non-empty.")
         
         df = self.spark.read.table(input_table_name)
-        # Add sampling logic
+        # sampling logic
         if sample_percent is not None:
             if not (0 < sample_percent <= 100):
                 raise ValueError("sample_percent must be between 0 and 100.")
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     handler = dqx_handler(spark)
     print(handler.ws.config.host)
     print(handler.ws.config.token)
-    tbl = 'dqx_sandbox.dqx_bronze.payment'
+    tbl = 'dqx_sandbox.dqx_bronze.product'
     inp = """
     Phone numbers should follow standard format.
     customer_email is valid.
