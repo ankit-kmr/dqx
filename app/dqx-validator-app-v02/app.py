@@ -128,7 +128,11 @@ try:
         schemas = ["-- Select --"]
         if cat_select != "-- Select --":
             schemas += db.fetch_schemas(cat_select)
-        schema_select = st.selectbox("Schema", options=schemas, key="schema_select")
+        schema_select = st.selectbox(
+            "Schema", 
+            options=[s for s in schemas if not (s.startswith("dqx_") or '_dqx' in s.lower())], 
+            key="schema_select"
+        )
         
         tables = ["-- Select --"]
         if schema_select != "-- Select --":
