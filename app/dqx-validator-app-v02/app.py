@@ -134,7 +134,11 @@ try:
         if schema_select != "-- Select --":
             tables += db.fetch_tables(cat_select, schema_select)
         prev_table = st.session_state.get("prev_table_select", "-- Select --")
-        table_select = st.selectbox("Table", options=tables, key="table_select")
+        table_select = st.selectbox(
+            "Table", 
+            options=[t for t in tables if not (t.endswith("_output") or t.endswith("_quarantine"))], 
+            key="table_select"
+        )
         # Reset step if table selection changes
         if table_select != prev_table:
             st.session_state.step = 0
