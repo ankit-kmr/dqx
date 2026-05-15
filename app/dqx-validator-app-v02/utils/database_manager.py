@@ -92,7 +92,10 @@ class DatabaseManager:
             FROM {_config_catalog}.{_config_schema}.dqx_rule_mappings m
             JOIN {_config_catalog}.{_config_schema}.dqx_rule_definitions r ON m.rule_id = r.rule_id
             WHERE m.table_name = '{_src_catalog}.{_src_schema}.{_table}' AND m.is_active = true
-        ) SELECT * FROM ranked_rules WHERE row_num = 1
+        ) 
+        SELECT * FROM ranked_rules
+        WHERE row_num = 1 
+        and (column is not null or trim(column) != '')
         """
         with _self.get_connection().cursor() as cursor:
             cursor.execute(query)
