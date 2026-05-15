@@ -18,6 +18,16 @@ class DatabaseManager:
             access_token=self.token
         )
 
+    def _replace_placeholders(self, data, column_name):
+        """Recursively replaces <col_name> with the actual column name."""
+        if isinstance(data, str):
+            return data.replace("<col_name>", column_name)
+        elif isinstance(data, list):
+            return [self._replace_placeholders(item, column_name) for item in data]
+        elif isinstance(data, dict):
+            return {k: self._replace_placeholders(v, column_name) for k, v in data.items()}
+        return data
+    
     @st.cache_data(ttl=1200, show_spinner='')
     def fetch_catalogs(_self):
         with _self.get_connection().cursor() as cursor:
@@ -107,18 +117,7 @@ class DatabaseManager:
             return [row[0] for row in cursor.fetchall()]
 
     
-    def _replace_placeholders(self, data, column_name):
-        """Recursively replaces <col_name> with the actual column name."""
-        if isinstance(data, str):
-            return data.replace("<col_name>", column_name)
-        elif isinstance(data, list):
-            return [self._replace_placeholders(item, column_name) for item in data]
-        elif isinstance(data, dict):
-            return {k: self._replace_placeholders(v, column_name) for k, v in data.items()}
-        return data
-    
-    
-    def register_dq_rule(self, src_catalog, config_catalog, config_schema, src_schema, table, col, rule_id, criticality, args_dict):
+    def register_dq_rule(self, config_catalog, config_schema, src_catalog, src_schema, table, col, rule_id, criticality, args_dict):
         source_full_path = f"{src_catalog}.{src_schema}.{table}"
         
         # Replace <value> placeholders in the arguments dictionary

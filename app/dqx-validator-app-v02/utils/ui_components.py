@@ -274,7 +274,7 @@ class UIComponents:
                             a_dict = json.loads(entry['args']) if entry['args'].strip() else {}
                             
                             success, msg = self.db.register_dq_rule(
-                                self.config_catalog, cat, self.config_schema, schema, table, 
+                                self.config_catalog, self.config_schema, cat, schema, table, 
                                 entry['col'], entry['rid'], entry['crit'], a_dict
                             )
                             
