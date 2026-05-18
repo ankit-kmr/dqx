@@ -1,9 +1,7 @@
 import streamlit as st
 import json
 import pandas as pd
-from datetime import date, datetime
-import yaml
-import time
+from sqlglot import parse_one, exp
 
 
 class DqxUIComponents:
@@ -13,8 +11,18 @@ class DqxUIComponents:
         self.config_catalog = config_catalog
         self.config_schema = config_schema
         
+    def extract_column_names(self, data):
+        expression = data.get('arguments', {}).get('expression', '')
+        if not expression:
+            return []
+        try:
+            parsed = parse_one(expression)
+            columns = [node.name for node in parsed.find_all(exp.Column)]
+            return list(dict.fromkeys(columns))
+        except Exception:
+            return []
 
-    def create_bulk_configs(self, profile_checks , rule_definitions_df=None):
+    def create_bulk_configs(self, profile_checks, rule_definitions_df=None):
         bulk_configs = []
         for check in profile_checks:
             if isinstance(check, dict) and "check" in check:
@@ -24,7 +32,10 @@ class DqxUIComponents:
                 args = check_obj.get("arguments", {})
                 rid = None
                 col_name = args.get("column") or args.get("columns")
-
+                # If function is sql_expression, extract columns from expression
+                if rule_func == "sql_expression":
+                    cols = self.extract_column_names(check_obj)
+                    col_name = cols if cols else col_name
                 if rule_definitions_df is not None and rule_func:
                     rule_row = rule_definitions_df.loc[
                         rule_definitions_df['rule_function'].str.lower() == rule_func.lower()
