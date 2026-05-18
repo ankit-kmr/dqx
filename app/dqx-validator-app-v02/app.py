@@ -148,6 +148,64 @@ try:
             st.session_state.step = 0
         st.session_state.prev_table_select = table_select
 
+        
+        # # Links to Databricks environment components as link text with logo
+        st.divider()
+        st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
+        st.markdown(
+            """
+            <style>
+                .dqx-link {
+                    text-decoration: none;
+                    display: flex;
+                    align-items: center;
+                    font-size: 16px;
+                    margin-bottom: 8px;
+                    transition: text-decoration 0.2s;
+                }
+                .dqx-link:hover {
+                    text-decoration: underline;
+                }
+            </style>
+            <a href="https://dbc-4b58157d-c7bb.cloud.databricks.com/dashboardsv3/01f14ecddf181108b9e2252c5a21a410/published?o=7474648480850274" target="_blank" class="dqx-link">
+                <span style="font-size:20px; margin-right:6px;">📊</span>
+                <span style="font-size:16px;">Click here to view DQX Dashboard</span>
+            </a>
+            <a href="https://dbc-4b58157d-c7bb.cloud.databricks.com/jobs/737121623984611" target="_blank" class="dqx-link">
+                <span style="font-size:20px; margin-right:6px;">🚀</span>
+                <span style="font-size:16px;">Click here to open DQX Workflow</span>
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # 🏷️ App Branding & Version Footer (fixed at bottom of sidebar)
+        st.markdown(
+            """
+            <style>
+                .dqx-footer {
+                    position: fixed;
+                    left: 0;
+                    bottom: 30px;
+                    width: 250px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    opacity: 0.8;
+                    z-index: 100;
+                }
+                @media (max-width: 600px) {
+                    .dqx-footer { width: 100vw; }
+                }
+            </style>
+            <div class="dqx-footer">
+                <span style="font-size: 24px;">🛡️</span>
+                <span style="font-size: 14px; font-weight: 500; margin-top: 2px;">DQX Portal v1.0.1</span>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+
     # --- 5. Main Content Area ---
     if cat_select != "-- Select --" and table_select != "-- Select --":
         st.markdown(
