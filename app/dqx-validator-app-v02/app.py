@@ -148,10 +148,10 @@ try:
             st.session_state.step = 0
         st.session_state.prev_table_select = table_select
 
-        
         # # Links to Databricks environment components as link text with logo
         st.divider()
         st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
+        st.markdown("#### 🔗 Quick Links")
         st.markdown(
             """
             <style>
@@ -169,11 +169,11 @@ try:
             </style>
             <a href="https://dbc-4b58157d-c7bb.cloud.databricks.com/dashboardsv3/01f14ecddf181108b9e2252c5a21a410/published?o=7474648480850274" target="_blank" class="dqx-link">
                 <span style="font-size:20px; margin-right:6px;">📊</span>
-                <span style="font-size:16px;">Click here to view DQX Dashboard</span>
+                <span style="font-size:16px;">Data Quality Dashboard</span>
             </a>
             <a href="https://dbc-4b58157d-c7bb.cloud.databricks.com/jobs/737121623984611" target="_blank" class="dqx-link">
                 <span style="font-size:20px; margin-right:6px;">🚀</span>
-                <span style="font-size:16px;">Click here to open DQX Workflow</span>
+                <span style="font-size:16px;">Data Quality Workflow</span>
             </a>
             """,
             unsafe_allow_html=True
