@@ -18,13 +18,13 @@ st.markdown("""
     <style>
         /* 1. Force the main container to hug the left edge and use full width */
         .block-container {
-            padding-top: 1rem !important;
-            padding-left: 2rem !important; /* Set your desired left margin here */
+            padding-top: 0rem !important; /* Shipped up by reducing from 1rem to 0rem */
+            padding-left: 2rem !important; 
             padding-right: 2rem !important;
             max-width: 100% !important;
             margin-left: 0px !important;
         }
-
+        
         /* 2. Remove default Streamlit centering flexbox */
         [data-testid="stMainViewContainer"] {
             align-items: flex-start !important;
@@ -38,7 +38,7 @@ st.markdown("""
 
         /* 4. Shift title up and ensure left alignment */
         .stHeading h1 {
-            margin-top: -20px; 
+            margin-top: -45px; /* Shipped up by changing from -20px to -45px */
             padding-top: 0px;
             text-align: left;
         }
@@ -114,7 +114,15 @@ try:
     StateManager.initialize()
 
     # --- 4. Main UI Sidebar Navigation ---
-    st.title("🛡️ Data Quality Accelerator (DQX)")
+    st.markdown(
+        """
+        <div style="display: flex; align-items: center; margin-bottom: 0px;">
+            <h1 style="margin-bottom: 0px; margin-right: 4px;">🛡️ Data Quality Accelerator</h1>
+            <span style="font-size:16px; color:#666; margin-top:0px;">(Powered by DQX)</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     with st.sidebar:
         if st.button("🔄 Reset", use_container_width=True):
@@ -175,10 +183,13 @@ try:
                 <span style="font-size:20px; margin-right:6px;">🚀</span>
                 <span style="font-size:16px;">Data Quality Workflow</span>
             </a>
+            <a href="https://databrickslabs.github.io/dqx/" target="_blank" class="dqx-link">
+                <span style="font-size:20px; margin-right:6px;">📚</span>
+                <span style="font-size:16px;">DQX Documentation</span>
+            </a>
             """,
             unsafe_allow_html=True
         )
-
         # 🏷️ App Branding & Version Footer (fixed at bottom of sidebar)
         st.markdown(
             """
